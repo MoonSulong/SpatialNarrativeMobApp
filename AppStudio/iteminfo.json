@@ -1,0 +1,60 @@
+{
+    "access": "private",
+    "accessInformation": null,
+    "appCategories": [
+    ],
+    "avgRating": 0,
+    "banner": null,
+    "categories": [
+    ],
+    "commentsEnabled": true,
+    "created": 1597871601000,
+    "culture": "en-us",
+    "description": "\n<p style=' margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;'><span style=' font-family:'AvenirNext LT Pro Regular';'>Configure the Quick Report template to create a citizen engagement native app that allows you to capture an observation and submit it to an online service. Nominate a publicly shared or secured point, polyline, or polygon feature service where your citizen created features will be saved to. Add your own branding – icons, colors and splash screen images – to make the Quick Report app your own. Windows, Android, iOS, Mac and Linux apps can be generated from this template. For more information on configuring this app, see the </span><a href='https://doc.arcgis.com/en/appstudio/create-apps/templatequickreport.htm' rel='nofollow ugc'><span style=' font-family:'AvenirNext LT Pro Regular'; text-decoration: underline; color:#0000ff;'>Quick Report</span></a><span style=' font-family:'AvenirNext LT Pro Regular';'> documentation.</span></p>",
+    "documentation": null,
+    "extent": [
+    ],
+    "groupDesignations": null,
+    "guid": null,
+    "id": "a38b8984438a4e228ac37ca04cb2cf18",
+    "industries": [
+    ],
+    "isOrgItem": true,
+    "itemControl": "admin",
+    "languages": [
+    ],
+    "largeThumbnail": null,
+    "licenseInfo": "\n<p style=' margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;'><span style=' font-family:'AvenirNext LT Pro Regular';'>ArcGIS organizational account required.<br />See </span><a href='https://doc.arcgis.com/en/appstudio/#systemrequirements' rel='nofollow ugc'><span style=' font-family:'AvenirNext LT Pro Regular'; text-decoration: underline; color:#0000ff;'>AppStudio for ArcGIS system requirements</span></a><span style=' font-family:'AvenirNext LT Pro Regular';'>.</span></p>",
+    "listed": false,
+    "modified": 1598237555000,
+    "name": "a38b8984438a4e228ac37ca04cb2cf18.zip",
+    "numComments": 3,
+    "numRatings": 0,
+    "numViews": 3,
+    "owner": "Project1",
+    "ownerFolder": null,
+    "properties": null,
+    "protected": false,
+    "proxyFilter": null,
+    "scoreCompleteness": 56,
+    "screenshots": [
+    ],
+    "size": 2471070,
+    "snippet": "Citizen sourced data collection",
+    "spatialReference": null,
+    "tags": [
+    ],
+    "thumbnail": "thumbnail/thumbnail.png",
+    "title": "ReportTest",
+    "type": "Native Application",
+    "typeKeywords": [
+        "API_QML",
+        "App",
+        "Application",
+        "AppStudio",
+        "Configuration",
+        "Native",
+        "qml"
+    ],
+    "url": null
+}
