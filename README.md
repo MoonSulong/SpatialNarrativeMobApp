@@ -3,7 +3,7 @@
 
 ## Authors
 
-* **Sulong Zhou** - *Backend* - [MoonSulong](https://github.com/MoonSulong)
+* **Sulong Zhou** - [MoonSulong](https://github.com/MoonSulong)
  
 ## Table of contents
 * [1. Project Description](#1-project-descriptions)
