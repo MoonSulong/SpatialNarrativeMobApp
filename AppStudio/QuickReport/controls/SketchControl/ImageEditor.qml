@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ Page {
     property var exif_latitude
     property var exif_longtitude
     property var exif_altitude
+    property var sourceFileName
 
     property url defaultImageUrl
     property bool isNull: loaded && canvas.isNull && !imageUrl && pasteImageObject.empty
@@ -821,7 +822,9 @@ Page {
         onAccepted: {
             rasterize();
             saved();
-            sketch.visible = false;
+            sketch.visible = false;         
+            app.focus = true
+
         }
     }
 

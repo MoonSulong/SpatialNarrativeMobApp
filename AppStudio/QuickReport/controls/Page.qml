@@ -3,6 +3,7 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.1
 import ArcGIS.AppFramework 1.0
 import QtGraphicalEffects 1.0
+import QtQuick.Controls.Material 2.12
 
 FocusScope {
     id: _root
@@ -11,7 +12,7 @@ FocusScope {
     signal transitionInCompleted()
     signal transitionOutCompleted()
 
-    property bool isDebug: true
+    property bool isDebug: false//true
     property int headerHeight: 50*app.scaleFactor
     property int footerHeight: 50*app.scaleFactor
     property int transitionType: transition.none
@@ -22,6 +23,7 @@ FocusScope {
     property Item header: Item {}
     property Item content: Item {}
     property Item footer: Item {}
+    property string parentPage:""
 
     QtObject{
         id: transition
@@ -50,7 +52,7 @@ FocusScope {
     Rectangle{
         anchors.fill: parent
         border.color: "pink"
-        border.width: isDebug? 1:0
+        border.width: isDebug ? 1:0
         ColumnLayout {
             id: layout
             anchors.fill: parent
@@ -79,12 +81,16 @@ FocusScope {
                 id: contentContainer
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                Layout.topMargin: parentPage !== "reportGalleryPage"?app.units(1):0
+                Layout.rightMargin: parentPage !== "reportGalleryPage" && app.parent.parent && app.isSmallScreen?2 * app.defaultMargin:0
+                Layout.leftMargin: parentPage !== "reportGalleryPage" && app.parent.parent && app.isSmallScreen?2 * app.defaultMargin:0
                 color: "transparent"
                 border.color: "pink"
                 border.width: isDebug? 1:0
                 children: [content]
                 clip: true
                 visible: true
+                Material.elevation: -1
             }
 
             Rectangle{

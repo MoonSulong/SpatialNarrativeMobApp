@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,10 @@ import QtGraphicalEffects 1.0
 import QtQuick.Controls.Material 2.2
 
 import ArcGIS.AppFramework 1.0
+import ArcGIS.AppFramework.Networking 1.0
 import ArcGIS.AppFramework.Notifications 1.0
 
-import Esri.ArcGISRuntime 100.2
+import Esri.ArcGISRuntime 100.10
 
 import "../controls"
 
@@ -385,7 +386,7 @@ Rectangle {
             removeAttachments(attachments);
 
             // delete feature from server if failed to submit
-            if(AppFramework.network.isOnline && app.currentObjectId > 0 && (!theFeatureEditingSuccess || !theFeatureAttachmentsSuccess)) {
+            if(Networking.isOnline && app.currentObjectId > 0 && (!theFeatureEditingSuccess || !theFeatureAttachmentsSuccess)) {
                 app.deleteFeature(app.currentObjectId);
             }
 

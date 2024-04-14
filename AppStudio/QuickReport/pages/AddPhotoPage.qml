@@ -26,8 +26,9 @@ import QtPositioning 5.8
 import ArcGIS.AppFramework 1.0
 import ArcGIS.AppFramework.Multimedia 1.0
 
-import Esri.ArcGISRuntime 100.5
+import Esri.ArcGISRuntime 100.10
 import ArcGIS.AppFramework.Platform 1.0
+import ArcGIS.AppFramework.Networking 1.0
 
 import QtQuick.Controls.Material 2.2
 
@@ -39,8 +40,9 @@ import "../"
 
 Rectangle {
     id: rectContainer
-    width: parent.width
-    height: parent.height
+    objectName: "addPhotoPage"
+     width: parent ? parent.width :0
+    height:parent ?parent.height:0
     color: app.pageBackgroundColor
 
     signal next(string message)
@@ -59,6 +61,7 @@ Rectangle {
     property int maxbuttonlistItems: app.maximumAttachments
     property var webPage
     property var imageEditor
+    property var imageViewer
 
     property bool hasVideoAttachment: false
     property bool hasAudioAttachment: false
@@ -118,11 +121,11 @@ Rectangle {
     DocumentDialog {
         id: doc
 
-        onAccepted: {
-            console.log("***FILE SELECTED***", filePath)
-            file.path = filePath
-            fileInfo.filePath = filePath
-            var suffix = fileInfo.suffix
+        onAccepted: {          
+            console.log("***FILE SELECTED***", fileUrl)
+            var filePath = AppFramework.resolvedPath(fileUrl)
+            var attachmentfileInfo = AppFramework.fileInfo(filePath)
+            var suffix = attachmentfileInfo.suffix
             var filesallowed = "7Z, AIF, AVI, BMP, DOC, DOCX, DOT, ECW, EMF, EPA, GIF, GML, GTAR, GZ, IMG, J2K," +
                     "JP2, JPC, JPE, JPEG, JPF, JPG, JSON, MDB, MID, MOV, MP2, MP3, MP4, MPA, MPE, MPEG, MPG, MPV2, PDF, PNG, PPT," +
                     "PPTX, PS, PSD, QT, RA, RAM, RAW, RMI, SID, TAR, TGZ, TIF, TIFF, TXT, VRML, WAV, WMA, WMF, WPS, XLS, XLSX, XLT, XML, ZIP"
@@ -131,48 +134,37 @@ Rectangle {
             if(suffix.length > 0)
                 indx = filesallowed.toUpperCase().indexOf(suffix.toUpperCase())
 
-            var size = fileInfo.size
+            var size = attachmentfileInfo.size
 
             if(indx < 0)
             {
-
-
                 messageDialog.text = qsTr("File not supported.")
                 messageDialog.open()
-
             }
             else
             {
-
-
                 if (size <= 52428800)// 50MB
                 {
+                    if(!attachmentsFolder)
+                        attachmentsFolder = (AppFramework.fileInfo(attachmentsBasePath)).folder
                     if(!attachmentsFolder.exists)
                         attachmentsFolder.makeFolder()
+
                     if (!attachmentsFolder.fileExists(".nomedia") && Qt.platform.os === "android") {
-
                         attachmentsFolder.writeFile(".nomedia", "")
-
                     }
 
-                    var attachmentfileInfo = fileInfo//AppFramework.fileInfo(fileUrl);
-                    var attachfolder = attachmentfileInfo.folder
-                    var iscopied = attachfolder.copyFile(attachmentfileInfo.fileName,attachmentsFolder.path + "/"+ attachmentfileInfo.fileName)
-
-
+                    var sourcefolder = attachmentfileInfo.folder
+                    var destfilePath = attachmentsFolder.filePath(attachmentfileInfo.displayName);                    
+                    var iscopied = sourcefolder.copyFile(attachmentfileInfo.displayName,destfilePath)                    
                     var  attachedFileInfo = attachmentsFolder.fileInfo(attachmentfileInfo.fileName)
-
                     var filePrefix = Qt.platform.os == "windows"? "file:///": "file://"
-                    var attachedFilePath = filePrefix + attachmentsFolder.path + "/"+ attachmentfileInfo.fileName //videoFileInfo.filePath//fileUrl
-
+                    var attachedFilePath = filePrefix + attachmentsFolder.path + "/"+ attachmentfileInfo.displayName
                     var fsuffix = attachmentfileInfo.suffix.toLowerCase();
                     if(fsuffix === "jpg" || fsuffix === "jpeg" || fsuffix === "png" || fsuffix === "tif" || fsuffix === "tiff" || fsuffix === "gif")
                         appModel.append({path: attachedFilePath, type: "attachment4"})
                     else
                         appModel.append({path: attachedFilePath, type: "attachment5"})
-
-
-
 
                     visualListModel.initVisualListModel();
                 }
@@ -303,10 +295,27 @@ Rectangle {
         onAccepted: {
             if(captureMode === CameraDialog.CameraCaptureModeStillImage)
             {
+                if(!mypicturesFolder.exists)
+                    mypicturesFolder.makeFolder()
+                var fileInfo = AppFramework.fileInfo(fileUrl);
+                var picfolder = fileInfo.folder
+                var iscopied = picfolder.copyFile(fileInfo.fileName,mypicturesFolder.path + "/"+ fileInfo.fileName)
+
+                picfolder.removeFile(fileUrl)
+
+                var  picFileInfo = picfolder.fileInfo(fileInfo.fileName)
+                app.selectedImageFilePath = picFileInfo.filePath
+                var picturepath = ""
+
+                if(Qt.platform.os === "windows")
+                    picturepath = "file:///" + mypicturesFolder.path + "/"+ fileInfo.fileName
+                else
+                    picturepath = "file://" + mypicturesFolder.path + "/"+ fileInfo.fileName
+
                 if(positionSource.position.coordinate.latitude)
-                    addGPSParameters(fileUrl)
-                resizeImage(fileUrl)
-                app.selectedImageFilePath = fileUrl
+                    addGPSParameters(picturepath)
+                resizeImage(picturepath)
+                app.selectedImageFilePath = picturepath
 
                 appModel.append(
                             {path: app.selectedImageFilePath.toString(), type: "attachment"}
@@ -381,12 +390,17 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: {
+                    var stackitem = stackView.get(stackView.depth - 2)
+                    if (stackitem.objectName === "summaryPage") {
+                        app.steps++;
+                    }
                     app.steps--;
                     previous("");
                 }
             }
 
             CarouselSteps{
+                id:carousal
                 height: parent.height
                 anchors.centerIn: parent
                 items: app.numOfSteps
@@ -397,7 +411,7 @@ Rectangle {
                 source: "../images/ic_send_white_48dp.png"
                 height: 30 * app.scaleFactor
                 width: 30 * app.scaleFactor
-                visible: app.isFromSaved
+                visible: false//app.isFromSaved
                 enabled: app.isFromSaved && app.isReadyForSubmitReport && app.isOnline
                 opacity: enabled? 1:0.3
                 checkedColor : "transparent"
@@ -416,6 +430,7 @@ Rectangle {
 
         ListModel{
             id: visualListModel
+
 
             Component.onCompleted: {
                 visualListModel.initVisualListModel();
@@ -486,7 +501,15 @@ Rectangle {
                 MouseArea{
                     anchors.fill: parent
                     onClicked: {
-                        app.openWebView(1, { pageId: rectContainer, url: "" + 3 });
+                        if(app.helpPageUrl && validURL(app.helpPageUrl))
+                            app.openWebView(0, {  url: app.helpPageUrl });
+                        else
+                        {
+                            var component = webPageComponent;
+                            webPage = component.createObject(rectContainer);
+                            webPage.openSectionID(""+3)
+                        }
+                       // app.openWebView(1, { pageId: rectContainer, url: "" + 3 });
                     }
                 }
             }
@@ -609,11 +632,8 @@ Rectangle {
                     color: app.allowPhotoToSkip?"#6e6e6e":(app.appModel.count > 0 ? "#6e6e6e": app.buttonColor)
                     Layout.alignment: Qt.AlignHCenter
                     onIconClicked: {
-                        if(Qt.platform.os!="android"){
-                            pictureChooser.open()
-                        }else{
-                            androidPictureChooser.open()
-                        }
+                        pictureChooser.open()
+
                     }
                 }
 
@@ -743,16 +763,7 @@ Rectangle {
                     color: app.allowPhotoToSkip?"#6e6e6e":(app.appModel.count > 0 ? "#6e6e6e": app.buttonColor)
                     Layout.alignment: Qt.AlignHCenter
                     onIconClicked: {
-                        if (doc.supported)
-                        {
-                            doc.open()
-
-                        }
-                        else
-                        {
-                            messageDialog.text = "Not Supported"
-                            messageDialog.open()
-                        }
+                         doc.open()                     
                     }
                 }
 
@@ -988,7 +999,7 @@ Rectangle {
             var component = imageEditorComponent;
             imageEditor = component.createObject(rectContainer);
             imageEditor.visible = true;
-            imageEditor.workFolder = outputFolder;
+            imageEditor.workFolder = mypicturesFolder//outputFolder;
             imageEditor.exif_latitude = previewImageRect.copy_latitude;
             imageEditor.exif_longtitude = previewImageRect.copy_longtitude;
             imageEditor.exif_altitude = previewImageRect.copy_altitude;
@@ -998,7 +1009,7 @@ Rectangle {
             var pictureUrlInfo = AppFramework.urlInfo(pictureUrl);
             var picturePath = pictureUrlInfo.localFile;
             var assetInfo = AppFramework.urlInfo(picturePath);
-
+            imageEditor.sourceFileName = pictureUrlInfo.fileName
             var outputFileName;
 
             var suffix = AppFramework.fileInfo(picturePath).suffix;
@@ -1014,12 +1025,12 @@ Rectangle {
 
             outputFileName = "draft" + "-" + fileName + "." + suffix;
 
-            var outputFileInfo = outputFolder.fileInfo(outputFileName);
+            var outputFileInfo = mypicturesFolder.fileInfo(outputFileName);
 
-            outputFolder.removeFile(outputFileName);
-            outputFolder.copyFile(picturePath, outputFileInfo.filePath);
+            mypicturesFolder.removeFile(outputFileName);
+            mypicturesFolder.copyFile(picturePath, outputFileInfo.filePath);
 
-            pictureUrl = outputFolder.fileUrl(outputFileName);
+            pictureUrl = mypicturesFolder.fileUrl(outputFileName);
 
             fixRotate(pictureUrl)
 
@@ -1110,10 +1121,13 @@ Rectangle {
             anchors.fill: parent
             visible: false
 
+
             onSaved: {
                 app.appModel.set(grid.currentIndex, {path: saveUrl.toString(), type: "attachment"});
                 visualListModel.initVisualListModel();
                 previewImageRect.visible = false;
+                mypicturesFolder.removeFile(sourceFileName);
+
             }
         }
     }
@@ -1151,7 +1165,14 @@ Rectangle {
             }
             app.appModel.remove(grid.currentIndex)
 
+
             visualListModel.initVisualListModel()
+            if(!app.allowPhotoToSkip)
+            {
+                if(!app.appModel.count > 0)
+                    app.isReadyForSubmitReport = false
+            }
+
 
 
         }
@@ -1284,14 +1305,13 @@ Rectangle {
                         buttonHeight: parent.height
                         buttonWidth: (buttonbox.width - 20 * scaleFactor)/2
 
-                        visible: AppFramework.network.isOnline
+                        visible: Networking.isOnline
 
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
                                 popupOption.close()
-
-                                AppFramework.clipboard.share(selectedFileUrl)
+                                AppFramework.openUrlExternally(selectedFileUrl)
                             }
                         }
                     }
@@ -1316,16 +1336,9 @@ Rectangle {
 
     PictureChooser {
         id: pictureChooser
+        outputFolder: mypicturesFolder
 
         copyToOutputFolder: true
-
-        outputFolder {
-            path: "~/ArcGIS/AppStudio/Data"
-        }
-
-        Component.onCompleted: {
-            outputFolder.makeFolder();
-        }
 
         onAccepted: {
             photoReady = true;
@@ -1347,7 +1360,7 @@ Rectangle {
             visualListModel.initVisualListModel();
         }
     }
-
+/*
     AndroidPictureChooser {
         id: androidPictureChooser
         title: qsTr("Select Photo")
@@ -1381,7 +1394,7 @@ Rectangle {
             visualListModel.initVisualListModel();
         }
     }
-
+*/
     ConfirmBox{
         id: confirmToSubmit
         anchors.fill: parent
@@ -1393,25 +1406,30 @@ Rectangle {
         }
     }
 
-    FileFolder {
-        id: outputFolder
-        path: "~/ArcGIS/AppStudio/Data"
-        Component.onCompleted: {
-            try {
-                makeFolder();
-            } catch (e){
-                console.log(e)
-            }
 
-            if(!outputFolder.fileExists(".nomedia") && Qt.platform.os === "android"){
-                outputFolder.writeFile(".nomedia", "");
-            }
-        }
-    }
 
     Text{
         id:txtPreviewUrl
 
+    }
+
+
+    Component.onCompleted: {
+      var stackitem = stackView.get(stackView.depth - 2)
+        if(stackitem.objectName === "summaryPage")
+        {
+            nextButton.visible = false
+            carousal.visible = false
+
+        }
+
+    }
+
+    Keys.onReleased: {
+        if (event.key === Qt.Key_Back) {
+            back()
+            event.accepted = true;
+        }
     }
 
     function getWidth(parentwidth)
@@ -1464,17 +1482,26 @@ Rectangle {
         }
     }
 
+    function initModel()
+    {
+        visualListModel.initVisualListModel();
+    }
+
     function back(){
-        if(webPage != null && webPage.visible === true){
+        if( webPage !== undefined && webPage !== null  && webPage.visible === true){
             webPage.close();
             app.focus = true;
-        } else if(imageViewer != null && imageViewer.visible === true){
-            imageViewer.discardConfirmBox.visible = true;
-        } else if(androidPictureChooser.visible === true){
-            androidPictureChooser.close();
-        } else if(cameraWindow.visible === true){
-            cameraWindow.visible = false;
-        } else if(previewImageRect.visible === true) {
+        }
+//        else if(imageViewer !== undefined && imageViewer != null  && imageViewer.visible === true){
+//            imageViewer.discardConfirmBox.visible = true;
+//        }
+        else if(pictureChooser.visible === true){
+            pictureChooser.close();
+        }
+//        else if(cameraWindow.visible === true){
+//            cameraWindow.visible = false;
+//        }
+        else if(previewImageRect.visible === true) {
             if(previewImageRect.renameTextField.focus){
                 previewImageRect.renameTextField.focus = false;
                 app.focus = true;
@@ -1485,6 +1512,16 @@ Rectangle {
                 previewImageRect.infoPanelVisible = false;
             }
         } else {
+            var stackitem = stackView.get(stackView.depth - 2)// var stackitem = stackView.get(stackView.depth - 2)
+            if(stackitem.objectName === "summaryPage")
+            {
+                if(!app.allowPhotoToSkip && app.appModel.count === 0)
+                    app.hasAllRequired = false
+
+                app.populateSummaryObject()
+                app.steps++;
+
+            }
             app.steps--;
             previous("");
         }

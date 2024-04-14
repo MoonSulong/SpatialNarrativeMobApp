@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +22,12 @@ import Qt.labs.folderlistmodel 2.1
 
 import ArcGIS.AppFramework 1.0
 
-import Esri.ArcGISRuntime 100.2
+import Esri.ArcGISRuntime 100.10
 import "../"
 
 Item {
     focus: true
-    property int indexSelected: app.isFromSaved? app.pickListIndex:-1
+    property int indexSelected:app.pickListIndex
     property bool itemChecked: indexSelected  > -1
 
     ListView {
@@ -130,6 +130,6 @@ Item {
         }
         pickListIndex = indexSelected;
         backToPreviousPage = false;
-        next("")
+
     }
 }

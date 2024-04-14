@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,392 +14,514 @@
  *
  */
 
-import QtQuick 2.7
-import QtQuick.Controls 2.2
-import QtQuick.Layouts 1.1
-import QtGraphicalEffects 1.0
 
-import ArcGIS.AppFramework 1.0
+import QtQuick 2.9
+import QtQuick.Layouts 1.3
+import QtQuick.Controls 2.5
+import QtQuick.Controls.Material 2.3
 
-import "../controls/"
 
-Rectangle {
-    id:_root
-    width: parent.width
-    height: parent.height
-    color: app.pageBackgroundColor
+import "../controls" as Controls
 
-    signal next(string message)
-    signal previous(string message)
+import "../widgets" as Widgets
 
-    property int hitFeatureId
-    property variant attrValue
-    property string poweredby:qsTr("Powered by")
+Page {
+    id: aboutAppPage
 
     visible: false
+    width: parent.width
+    height: parent.height
 
-    ColumnLayout {
-        anchors.fill: parent
-        spacing: 0
+    property string poweredby:qsTr("Powered by")
+    property bool isLicenseInfoTextAvailable: app.info.licenseInfo.replace(/<[^>]+>/g, '').trim() > ""
+    property bool isCreditsTextAvailable: app.info.accessInformation.trim() > ""
 
-        Rectangle {
-            id: mapPage_headerBar
-            Layout.alignment: Qt.AlignTop
-            color: app.headerBackgroundColor
-            Layout.preferredWidth: parent.width
-            Layout.preferredHeight: 50 * app.scaleFactor
 
-            MouseArea {
+    contentItem: Controls.BasePage {
+
+        header: ToolBar {
+
+            id: header
+
+            height: app.headerHeight
+            width: parent.width
+
+            RowLayout {
                 anchors.fill: parent
-                onClicked: {
-                    mouse.accepted = false
-                }
-            }
 
-            Text {
-                id: mapPage_titleText
-                text: qsTr("About")
-                textFormat: Text.StyledText
-                anchors.centerIn: parent
-                font.pixelSize: app.titleFontSize
-                font.family: app.customTitleFont.name
-                color: app.headerTextColor
-                maximumLineCount: 1
-                elide: Text.ElideRight
-            }
+                Controls.Icon {
+                    id: closeBtn
 
-            Icon {
-                imageSource: "../images/ic_clear_white_48dp.png"
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                onIconClicked: {
-                    hide()
+                    visible: true
+                    imageSource: "../images/ic_clear_white_48dp.png"
+                    Layout.alignment: Qt.AlignLeft
+                    onIconClicked: {
+                        aboutAppPage.hide()
+                    }
                 }
+
+                Label {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    textFormat: Text.StyledText
+                    text: qsTr("About")
+                    clip: true
+                    elide: Text.ElideRight
+                    color: app.headerTextColor
+
+                    fontSizeMode: Text.Fit
+                    font.pixelSize: app.titleFontSize
+                    font.family: app.customTitleFont.name
+
+                    horizontalAlignment: Label.AlignHCenter
+                    verticalAlignment: Label.AlignVCenter
+                    leftPadding: 16 * app.scaleFactor
+                    rightPadding: leftPadding
+                }
+
+                Item {
+                    Layout.preferredWidth: 48 * app.scaleFactor
+                    Layout.fillHeight: true
+                }
+
             }
         }
 
-        Rectangle {
-            Layout.alignment: Qt.AlignTop
-            Layout.fillHeight: true
-            color: app.pageBackgroundColor
-            Layout.preferredWidth: parent.width
-            Layout.preferredHeight: parent.height - mapPage_headerBar.height
-            Layout.topMargin: app.units(16)
-            Layout.bottomMargin: app.isIPhoneX ? 20 * AppFramework.displayScaleFactor : 0
+        contentItem: Flickable {
+            id: flickable
 
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    mouse.accepted = false
+            anchors.fill: parent
+            contentWidth: parent.width
+            contentHeight: aboutPageColumn.height
+            boundsBehavior: Flickable.StopAtBounds
+            clip: true
+
+            ColumnLayout {
+                id: aboutPageColumn
+
+                width: Math.min(parent.width, 600*app.scaleFactor)
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 0
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 72 * scaleFactor
                 }
-            }
 
-            Flickable {
-                anchors.fill: parent
-                contentHeight: columnContainer.height
-                clip: true
-
-                ColumnLayout {
-                    id: columnContainer
-                    width: Math.min(parent.width, 600*app.scaleFactor)
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: app.units(16)
+                Pane {
+                    Layout.preferredWidth: 80 * scaleFactor
+                    Layout.preferredHeight: 80 * scaleFactor
+                    Layout.alignment: Qt.AlignHCenter
+                    Material.elevation: 2
+                    padding: 0
 
                     Image {
-                        Layout.preferredHeight: 50 * AppFramework.displayScaleFactor
-                        Layout.preferredWidth: 50 * AppFramework.displayScaleFactor
-                        Layout.alignment: Qt.AlignHCenter
-                        fillMode: Image.PreserveAspectFit
-                        source: getAppIcon()
-                        visible: source > ""
+                        anchors.fill: parent
+                        source: app.info.thumbnail
+                        fillMode: Image.PreserveAspectCrop
                     }
+                }
 
-                    Text {
-                        text: app.info.title
-                        color: app.textColor
-                        font.pixelSize: app.titleFontSize
-                        font.family: app.customTitleFont.name
-                        font.bold: true
-                        font.weight: Font.Bold
-                        Layout.alignment: Qt.AlignHCenter
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 16 * scaleFactor
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 28 * scaleFactor
+
+                    text: app.info.title
+                    wrapMode: Label.WrapAtWordBoundaryOrAnywhere
+                    maximumLineCount: 2
+                    elide: Label.ElideRight
+
+                    font.pixelSize: app.titleFontSize
+                    font.family: app.titleFontFamily
+                    font.weight: Font.DemiBold
+                    color: app.black_87
+
+                    horizontalAlignment: Label.AlignHCenter
+                    verticalAlignment: Label.AlignVCenter
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 8 * scaleFactor
+                }
+
+                Label {
+                    Layout.fillWidth: true
+
+                    text: qsTr("Version") + ": %1".arg(app.info.version)
+
+                    font.pixelSize: app.textFontSize
+                    font.family: app.baseFontFamily
+                    color: app.black_87
+
+                    horizontalAlignment: Label.AlignHCenter
+                    verticalAlignment: Label.AlignVCenter
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 24 * scaleFactor
+                }
+
+                Label {
+                    Layout.fillWidth: true
+
+                    text: app.info.description
+                    wrapMode: Label.WrapAtWordBoundaryOrAnywhere
+                    elide: Label.ElideRight
+
+                    font.pixelSize: app.textFontSize
+                    font.family: app.baseFontFamily
+                    color: app.black_87
+                    linkColor: app.primaryColor
+
+                    leftPadding: 16 * scaleFactor
+                    rightPadding: 16 * scaleFactor
+                    bottomPadding: 14 * scaleFactor
+                    topPadding: 0
+
+                    horizontalAlignment: Label.AlignLeft
+                    verticalAlignment: Label.AlignVCenter
+
+                    onLinkActivated: {
+                        app.openWebView(0, {  url: link });
                     }
+                }
 
-                    Text {
-                        text: app.info.description
-                        visible: app.info.description > ""
-                        textFormat: Text.StyledText
-                        color: app.textColor
-                        wrapMode: Text.Wrap
-                        linkColor: app.headerBackgroundColor
-                        Layout.preferredWidth: parent.width - 20 * AppFramework.displayScaleFactor
-                        Layout.alignment: Qt.AlignHCenter
-                        font.pixelSize: app.textFontSize
-                        font.family: app.customTextFont.name
-                        onLinkActivated: {
-                            app.openWebView(0, { pageId: _root, url: link });
-                        }
-                    }
+                Button {
+                    id: accessAndUseConstraintsButtonControl
+                    visible: isLicenseInfoTextAvailable
 
-                    Text{
-                        text: qsTr("Access and Use Constraints") + ":"
-                        visible: app.info.licenseInfo > ""
-                        color: app.textColor
-                        wrapMode: Text.Wrap
-                        linkColor: app.headerBackgroundColor
-                        Layout.preferredWidth: parent.width - 20 * AppFramework.displayScaleFactor
-                        Layout.alignment: Qt.AlignHCenter
-                        font {
-                            bold: true
-                            pixelSize: app.titleFontSize
-                            weight: Font.Bold
-                            family: app.customTitleFont.name
-                        }
-                    }
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 56 * scaleFactor
 
-                    Text {
-                        text: app.info.licenseInfo
-                        visible: app.info.licenseInfo > ""
-                        textFormat: Text.StyledText
-                        color: app.textColor
-                        wrapMode: Text.Wrap
-                        linkColor: app.headerBackgroundColor
-                        Layout.preferredWidth: parent.width - 20 * AppFramework.displayScaleFactor
-                        Layout.alignment: Qt.AlignHCenter
-                        font.pixelSize: app.textFontSize
-                        font.family: app.customTextFont.name
-                        onLinkActivated: {
-                            app.openWebView(0, { pageId: _root, url: link });
-                        }
-                    }
+                    Material.foreground: app.black_87
+                    text: qsTr("Access and Use Constraints")
+                    font.pixelSize: app.titleFontSize
+                    font.family: app.baseFontFamily
+                    font.weight: Font.DemiBold
 
-                    Text {
-                        text: qsTr("Credits") + ":"
-                        visible: app.info.accessInformation > ""
-                        textFormat: Text.RichText
-                        color: app.textColor
-                        wrapMode: Text.Wrap
-                        linkColor: app.headerBackgroundColor
-                        Layout.preferredWidth: parent.width - 20 * AppFramework.displayScaleFactor
-                        Layout.alignment: Qt.AlignHCenter
-                        font {
-                            bold: true
-                            weight: Font.Bold
-                            pixelSize: app.titleFontSize
-                            family: app.customTitleFont.name
-                        }
-                    }
-
-                    Text {
-                        text: app.info.accessInformation
-                        visible: app.info.accessInformation > ""
-                        textFormat: Text.StyledText
-                        color: app.textColor
-                        wrapMode: Text.Wrap
-                        linkColor: app.headerBackgroundColor
-                        Layout.preferredWidth: parent.width - 20 * AppFramework.displayScaleFactor
-                        Layout.alignment: Qt.AlignHCenter
-                        font.pixelSize: app.textFontSize
-                        font.family: app.customTextFont.name
-                        onLinkActivated: {
-                            app.openWebView(0, { pageId: _root, url: link });
-                        }
-                    }
-
-                    Text {
-                        text: qsTr("About the App") + ":"
-                        textFormat: Text.RichText
-                        color: app.textColor
-                        wrapMode: Text.Wrap
-                        linkColor: app.headerBackgroundColor
-                        Layout.preferredWidth: parent.width - 20 * AppFramework.displayScaleFactor
-                        Layout.alignment: Qt.AlignHCenter
-                        font {
-                            bold: true
-                            weight: Font.Bold
-                            pixelSize: app.titleFontSize
-                            family: app.customTitleFont.name
-                        }
-                    }
-
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 48 * scaleFactor
+                    contentItem: Item {
+                        anchors.fill: parent
 
                         RowLayout {
-                            id: powerByRow
-
                             anchors.fill: parent
-
                             spacing: 0
 
                             Item {
-                                Layout.preferredWidth: 8 * scaleFactor
                                 Layout.fillHeight: true
-                            }
-
-                            IconImage {
-                                Layout.preferredWidth: 48 * scaleFactor
-                                Layout.fillHeight: true
-
-                                MouseArea {
-                                    anchors.fill: parent
-
-                                    onClicked: {
-                                        openAppStudioUrl();
-                                    }
-                                }
-                            }
-
-                            Item {
                                 Layout.preferredWidth: 16 * scaleFactor
-                                Layout.fillHeight: true
-                            }
-
-                            Label {
-                                Layout.fillHeight: true
-
-                                text: poweredby
-                                clip: true
-                                font.pixelSize: app.textFontSize
-                                font.family: app.customTextFont.name
-
-
-                                linkColor: app.headerBackgroundColor
-                                color: app.black_87
-
-
-                                font.weight: Font.Normal
-                                horizontalAlignment: Label.AlignLeft
-                                verticalAlignment: Label.AlignVCenter
-                            }
-
-                            Item {
-                                Layout.preferredWidth: 4 * scaleFactor
-                                Layout.fillHeight: true
                             }
 
                             Label {
                                 Layout.fillWidth: true
-                                Layout.fillHeight: true
 
-                                text: "AppStudio for ArcGIS"
+                                text: accessAndUseConstraintsButtonControl.text
 
-                                font.pixelSize: app.textFontSize
-                                font.family: app.customTextFont.name
-
-
-
-                                elide: Label.ElideRight
-                                clip: true
-                                
-                                color: app.black_87
-
-                                linkColor: app.headerBackgroundColor
-
-
-                                font.bold: true
+                                font: accessAndUseConstraintsButtonControl.font
+                                elide: Label.AlignRight
 
                                 horizontalAlignment: Label.AlignLeft
                                 verticalAlignment: Label.AlignVCenter
+                            }
 
-                                MouseArea {
+                            Item {
+                                Layout.preferredHeight: 24 * scaleFactor
+                                Layout.preferredWidth: 24 * scaleFactor
+
+                                Widgets.Icon {
                                     anchors.fill: parent
 
-                                    onClicked: {
-                                        openAppStudioUrl();
-                                    }
+                                    source: "../images/baseline_expand_less_white_48dp.png"
+                                    indicatorColor: app.primaryColor
+                                    rotation: termsLabel.isOpen ? 0:180
                                 }
                             }
 
                             Item {
-                                Layout.preferredWidth: 16 * scaleFactor
                                 Layout.fillHeight: true
+                                Layout.preferredWidth: 16 *  scaleFactor
                             }
                         }
                     }
 
+                    background: Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                    }
 
+                    onClicked: {
+                        termsLabel.isOpen = !termsLabel.isOpen;
+                    }
+                }
 
-                    Text {
-                        text: qsTr("Version") + ":"
-                        visible: app.info.version > ""
-                        textFormat: Text.RichText
-                        color: app.textColor
-                        wrapMode: Text.Wrap
-                        linkColor: app.headerBackgroundColor
-                        Layout.preferredWidth: parent.width - 20 * AppFramework.displayScaleFactor
-                        Layout.alignment: Qt.AlignHCenter
-                        font {
-                            bold: true
-                            weight: Font.Bold
-                            pixelSize: app.titleFontSize
-                            family: app.customTitleFont.name
+                Label {
+                    id: termsLabel
+
+                    property bool isOpen: false
+
+                    Layout.preferredHeight: isOpen? implicitHeight : 0
+
+                    Behavior on Layout.preferredHeight {
+                        NumberAnimation { duration: app.normalDuration }
+                    }
+
+                    Layout.fillWidth: true
+
+                    text: isLicenseInfoTextAvailable ? app.info.licenseInfo.trim() : ""
+                    linkColor: app.primaryColor
+                    wrapMode: Label.WrapAtWordBoundaryOrAnywhere
+                    clip: true
+
+                    font.pixelSize: app.textFontSize
+                    font.family: app.baseFontFamily
+                    color: app.black_87
+
+                    leftPadding: 16 * scaleFactor
+                    rightPadding: 16 * scaleFactor
+
+                    horizontalAlignment: Label.AlignLeft
+                    verticalAlignment: Label.AlignVCenter
+
+                    onLinkActivated: {
+                        app.openWebView(0, {  url: link });
+                    }
+                }
+
+                Button {
+                    id: creditsButtonControl
+                    visible: isCreditsTextAvailable
+
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 56 * scaleFactor
+
+                    Material.foreground: app.black_87
+                    text: qsTr("Credits")
+                    font.pixelSize: app.titleFontSize
+                    font.family: app.baseFontFamily
+                    font.weight: Font.DemiBold
+
+                    contentItem: Item {
+                        anchors.fill: parent
+
+                        RowLayout {
+                            anchors.fill: parent
+                            spacing: 0
+
+                            Item {
+                                Layout.fillHeight: true
+                                Layout.preferredWidth: 16 * scaleFactor
+                            }
+
+                            Label {
+                                Layout.fillWidth: true
+
+                                text: creditsButtonControl.text
+
+                                font: creditsButtonControl.font
+
+                                elide: Label.AlignRight
+
+                                horizontalAlignment: Label.AlignLeft
+                                verticalAlignment: Label.AlignVCenter
+                            }
+
+                            Item {
+                                Layout.preferredHeight: 24 *  scaleFactor
+                                Layout.preferredWidth: 24 *  scaleFactor
+
+                                Widgets.Icon {
+                                    anchors.fill: parent
+
+                                    source: "../images/baseline_expand_less_white_48dp.png"
+                                    indicatorColor: app.primaryColor
+                                    rotation: creditsSection.isOpen ? 0:180
+                                }
+                            }
+
+                            Item {
+                                Layout.fillHeight: true
+                                Layout.preferredWidth: 16 *  scaleFactor
+                            }
                         }
                     }
 
-                    Text {
-                        text: app.info.version
-                        visible: app.info.version > ""
-                        textFormat: Text.StyledText
-                        color: app.textColor
-                        wrapMode: Text.Wrap
-                        linkColor: app.headerBackgroundColor
-                        Layout.preferredWidth: parent.width - 20 * AppFramework.displayScaleFactor
-                        Layout.alignment: Qt.AlignHCenter
-                        font.pixelSize: app.textFontSize
-                        font.family: app.customTextFont.name
-                        onLinkActivated: {
-                            app.openWebView(0, { pageId: _root, url: link });
+                    background: Rectangle {
+                        anchors.fill: parent
+                        color: "transparent"
+                    }
+
+                    onClicked: {
+                        creditsSection.isOpen = !creditsSection.isOpen;
+                    }
+                }
+
+                Item {
+                    id: creditsSection
+
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: isOpen ? creditsColumn.height : 0
+                    clip: true
+
+                    Behavior on Layout.preferredHeight {
+                        NumberAnimation { duration: app.normalDuration }
+                    }
+
+                    property bool isOpen: false
+
+                    ColumnLayout {
+                        id: creditsColumn
+
+                        width: parent.width
+
+                        spacing: 0
+
+
+                        Label {
+                            Layout.fillWidth: true
+
+                            text: isCreditsTextAvailable ? app.info.accessInformation.trim() : ""
+                            wrapMode: Label.WrapAtWordBoundaryOrAnywhere
+                            clip: true
+
+                            font.pixelSize: app.textFontSize
+                            font.family: app.baseFontFamily
+                            color: app.black_87
+                            linkColor: app.primaryColor
+
+                            leftPadding: 16 * scaleFactor
+                            rightPadding: 16 * scaleFactor
+                            bottomPadding: 24 * scaleFactor
+                            topPadding: 0
+
+                            onLinkActivated: {
+                                app.openWebView(0, {  url: link });
+                            }
                         }
                     }
                 }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 24 * scaleFactor
+                }
             }
         }
-    }
 
-    DropShadow {
-        source: mapPage_headerBar
-        //anchors.fill: source
-        width: source.width
-        height: source.height
-        cached: false
-        radius: 5.0
-        samples: 16
-        color: "#80000000"
-        smooth: true
-        visible: source.visible
-    }
+        footer:Widgets.Footer {
+            id:footer
+            content: Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 24 * scaleFactor
+                Layout.margins: 8
 
-    function getAppIcon() {
-        var resources = app.info.value("resources", {});
-        var appIconPath = "", appIconFilePath = "";
+                RowLayout {
+                    id: powerByRow
+                    anchors.horizontalCenter: parent.horizontalCenter
 
-        if (!resources) {
-            resources = {};
+                    spacing:0
+
+                    Item {
+                        Layout.preferredWidth: 16 * scaleFactor
+                        Layout.fillHeight: true
+                    }
+
+                    Label {
+                        Layout.fillHeight: true
+
+                        text: poweredby
+                        clip: true
+
+                        font.pixelSize: 12 * scaleFactor
+                        font.family: app.baseFontFamily
+                        color: app.black_87
+
+                        horizontalAlignment: Label.AlignLeft
+                        verticalAlignment: Label.AlignVCenter
+                    }
+
+                    Item {
+                        Layout.preferredWidth: 8 * scaleFactor
+                        Layout.fillHeight: true
+                    }
+
+                    Item {
+                        Layout.preferredWidth: 24 * scaleFactor
+                        Layout.preferredHeight: 24 * scaleFactor
+
+                        Widgets.Icon {
+                            anchors.fill: parent
+
+                            source: "../images/appstudio.png"
+
+                            MouseArea {
+                                anchors.fill: parent
+
+                                onClicked: {
+                                    openAppStudioUrl();
+                                }
+                            }
+                        }
+                    }
+
+                    Item {
+                        Layout.preferredWidth: 4 * scaleFactor
+                        Layout.fillHeight: true
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        text: "ArcGIS AppStudio"
+                        elide: Label.ElideRight
+                        clip: true
+
+                        font.pixelSize: 12 * scaleFactor
+                        font.family: app.baseFontFamily
+                        font.weight: Font.DemiBold
+                        color: app.black_87
+
+                        horizontalAlignment: Label.AlignLeft
+                        verticalAlignment: Label.AlignVCenter
+
+                        MouseArea {
+                            anchors.fill: parent
+
+                            onClicked: {
+                                openAppStudioUrl();
+                            }
+                        }
+                    }
+
+                    Item {
+                        Layout.preferredWidth: 16 * scaleFactor
+                        Layout.fillHeight: true
+                    }
+
+                }
+
+            }
         }
 
-        if (resources.appIcon) {
-            appIconPath = resources.appIcon;
-        }
-
-        //console.log("appIcon absolute path ", appIconPath, app.folder.filePath(appIconPath));
-
-        var f = AppFramework.fileInfo(appIconPath)
-        console.log(f.filePath, f.url, f.exists)
-
-        if(f.exists) {
-            appIconFilePath = "file:///" +app.folder.filePath(appIconPath);
-        }
-
-        return appIconFilePath;
     }
-
     function openAppStudioUrl() {
-        app.openWebView(0, { pageId: _root, url: "https://appstudio.arcgis.com/" });
+        var _url = "https://www.esri.com/en-us/arcgis/products/appstudio-for-arcgis/overview";
+        app.openWebView(0, {  url: _url });
+    }
+
+    onVisibleChanged: {
+        app.focus = true
     }
 
     function open(){
-        _root.visible = true
+        aboutAppPage.visible = true
         bottomUp.start();
     }
 
@@ -409,24 +531,25 @@ Rectangle {
 
     NumberAnimation {
         id: bottomUp
-        target: _root
+        target: aboutAppPage
         property: "y"
         duration: 200
-        from:_root.height
+        from:aboutAppPage.height
         to:0
         easing.type: Easing.InOutQuad
     }
 
     NumberAnimation {
         id: topDown
-        target: _root
+        target: aboutAppPage
         property: "y"
         duration: 200
         from:0
-        to:_root.height
+        to:aboutAppPage.height
         easing.type: Easing.InOutQuad
         onStopped: {
-            _root.visible = false
+            aboutAppPage.visible = false
         }
     }
 }
+

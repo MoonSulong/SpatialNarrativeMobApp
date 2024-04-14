@@ -103,7 +103,7 @@ main() {
   exit_status=0
   set_workdir
   set_lreleasedir
-  ( set -x; lupdate "$WORKDIR" -extensions qml -ts "$WORKDIR/${APP_NAME}/languages/${APP_NAME}.ts" )
+  ( set -x; lupdate "$WORKDIR" -extensions qml "$WORKDIR/${APP_NAME}/languages/i18n/appinfo.tri" "$WORKDIR/${APP_NAME}/languages/i18n/appschema.tri" -ts "$WORKDIR/${APP_NAME}/languages/${APP_NAME}.ts" )
   ( set -x; lupdate "$WORKDIR" -extensions qml -pluralonly -ts "$WORKDIR/${APP_NAME}/languages/${APP_NAME}_en.ts" )
   for f in $WORKDIR/${LANGUAGES_FOLDER}/*.ts ; do
     if [ "$f" == "$WORKDIR/${LANGUAGES_FOLDER}/${APP_NAME}.ts" ]; then

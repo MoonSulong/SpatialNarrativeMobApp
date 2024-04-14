@@ -1,6 +1,11 @@
 {
     "appLink": "",
-    "arcgisRuntime": 1002,
+    "arcgisRuntime": {
+        "version": {
+            "major": 100,
+            "minor": 10
+        }
+    },
     "capabilities": {
         "audio": true,
         "backgroundModes": {
@@ -33,13 +38,14 @@
         "location": true,
         "microphone": true,
         "network": true,
-        "storage": true,
+        "storage": false,
         "vibration": false
     },
     "deployment": {
         "android": {
             "packageName": ""
         },
+        "arcgisApiKey": "",
         "arcgisRuntimeExtensionsLicense": "",
         "arcgisRuntimeLicense": "runtimelite,1000,rud6707897439,none,8SH93PJPXMLF003AD233",
         "clientId": "",
@@ -65,9 +71,9 @@
     ],
     "display": {
         "desktop": {
-            "minimumHeight": 500,
+            "minimumHeight": 568,
             "minimumWidth": 320,
-            "windowMode": "default"
+            "windowMode": "normal"
         },
         "enableHighDpi": true,
         "phone": {
@@ -108,16 +114,18 @@
         "buttonColor": "#b23a3a",
         "customTextFontTTF": "assets/OpenSans-Regular.ttf",
         "customTitleFontTTF": "assets/OpenSans-Regular.ttf",
-        "emailAddress": "feedback@esri.com",
+        "damageTypeId": "0,1,2,3",
+        "disasterTypeId": "0,1,2",
+        "emailAddress": "mwu233@wisc.edu",
         "emailLabel": "Email",
         "enableSelectFiles": true,
         "featureLayerId": "0",
-        "featureServiceURL": "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/Madison/FeatureServer",
+        "featureServiceURL": "https://services.arcgis.com/HRPe58bUyBqyyiCt/arcgis/rest/services/Hurricane_Observation/FeatureServer",
         "headerBackgroundColor": "#b23a3a",
         "headerTextColor": "#FFF",
         "logoImage": "assets/color-UWcrest-print.png",
-        "logoUrl": "http://www.arcgis.com",
-        "maximumAttachments": 6,
+        "logoUrl": "https://geography.wisc.edu/",
+        "maximumAttachments": "6",
         "offlineMMPKID": "",
         "pageBackgroundColor": "#F8F8F8",
         "password": "",
@@ -125,32 +133,38 @@
         "phoneLabel": "Call us",
         "phoneNumber": "+1-909-793-2853",
         "reportHelpUrl": "",
+        "reportTypeId": "0,1,2",
         "showAlbum": true,
         "signInImage": "",
         "socialMediaLabel": "Follow us",
         "socialMediaUrl": "",
         "sortDomainByAlphabetical": false,
-        "startBackground": "assets/UW-Madison-Red.jpg",
+        "startBackground": "assets/hurricane.jpg",
         "startShowLogo": true,
         "supportAudioRecorder": true,
         "supportVideoRecorder": true,
-        "textColor": "#b23a3a",
+        "textColor": "#4C4C4C",
         "thankyouMessage": "",
         "username": "",
-        "webMapID": "04e8833a001d472f8377a58d232d5afa",
+        "webMapID": "2e6636db98c64d0882deb005b3307d51",
         "websiteLabel": "Website",
         "websiteUrl": "http://appstudio.arcgis.com"
     },
     "resources": {
-        "appIcon": "assets/color-center-reverse-UWlogo-print.png",
+        "appIcon": "thumbnail.png",
         "launchImageBackground": "launchimage-background.png",
         "launchImageBackgroundColor": "#ffffff",
         "launchImageOverlay": "launchimage-overlay.png"
     },
     "templateName": "quickreport",
     "translations": {
-        "fileName": "QuickReport",
-        "path": "QuickReport/languages"
+        "fileName": [
+            "QuickReport",
+            "qtquickcontrols",
+            "qtbase_min"
+        ],
+        "path": "QuickReport/languages",
+        "translateUsageDescriptionKeys": true
     },
     "type": "app",
     "universalLink": "",
@@ -165,7 +179,7 @@
     },
     "version": {
         "major": 1,
-        "micro": 3,
+        "micro": 5,
         "minor": 0
     }
 }

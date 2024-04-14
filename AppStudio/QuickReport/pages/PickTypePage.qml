@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,13 @@ import QtQuick.Dialogs 1.2
 
 import ArcGIS.AppFramework 1.0
 
-import Esri.ArcGISRuntime 100.2
+import Esri.ArcGISRuntime 100.10
 import "../controls/"
 
 Rectangle {
     id: pickTypePage
-    width: app.width
-    height: app.height
+    width: parent?parent.width:0
+    height: parent?parent.height:0
     color: app.pageBackgroundColor
     signal next(string message)
     signal previous(string message)
@@ -78,13 +78,29 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: {
-                    app.steps--;
-                    previous("")
+                    var stackitem = stackView.get(stackView.depth - 2)
+                    if(stackitem.objectName === "summaryPage")
+                    {
+                        var oldAttributesArray = JSON.parse(JSON.stringify(attributesArray));
 
+                        typePicker.getProtoTypeAndSubTypeDomains()
+                        Object.keys(oldAttributesArray).forEach(function(key,index) {
+                            attributesArray[key] = oldAttributesArray[key]
+                        });
+
+
+                        app.populateSummaryObject()
+                        previous("")
+                    }
+                    else {
+                        app.steps--;
+                        previous("")
+                    }
                 }
             }
 
             CarouselSteps{
+                id:carousal
                 height: parent.height
                 anchors.centerIn: parent
                 items: app.numOfSteps
@@ -95,7 +111,7 @@ Rectangle {
                 source: "../images/ic_send_white_48dp.png"
                 height: 30 * app.scaleFactor
                 width: 30 * app.scaleFactor
-                visible: app.isFromSaved
+                visible: false//app.isFromSaved
                 enabled: app.isFromSaved && app.isReadyForSubmitReport && app.isOnline
                 opacity: enabled? 1:0.3
                 checkedColor : "transparent"
@@ -121,7 +137,7 @@ Rectangle {
             spacing: 5*app.scaleFactor
             Text {
                 id: createPage_titleText
-                text: qsTr("Select Report Type")
+                text: qsTr("Select Disaster Type")
                 textFormat: Text.StyledText
                 Layout.alignment: Qt.AlignHCenter
                 font.pixelSize: app.titleFontSize
@@ -146,7 +162,21 @@ Rectangle {
                 MouseArea{
                     anchors.fill: parent
                     onClicked: {
-                        app.openWebView(1, { pageId: pickTypePage, url: "" + 1 });
+                        if(app.helpPageUrl && validURL(app.helpPageUrl))
+                            app.openWebView(0, {  url: app.helpPageUrl });
+                        else
+                        {
+                            if(app.helpPageUrl && validURL(app.helpPageUrl))
+                                app.openWebView(0, {  url: app.helpPageUrl });
+                            else
+                            {
+                                var component = webPageComponent;
+                                webPage = component.createObject(pickTypePage);
+                                webPage.openSectionID(""+1)
+                            }
+
+                            //app.openWebView(1, { pageId: pickTypePage, url: "" + 1 });
+                        }
                     }
                 }
             }
@@ -184,6 +214,7 @@ Rectangle {
                     anchors.fill: parent
                     onClicked: {
                         typePicker.getProtoTypeAndSubTypeDomains()
+                        next("")
                     }
                     onPressedChanged: {
                         nextButton.buttonColor = pressed? Qt.darker(app.buttonColor, 1.1): app.buttonColor
@@ -216,15 +247,26 @@ Rectangle {
         smooth: true
         visible: source.visible
     }
+    Component.onCompleted: {
+      var stackitem = stackView.get(stackView.depth - 2)
+        if(stackitem.objectName === "summaryPage")
+        {
+            nextButton.visible = false
+            carousal.visible = false
+
+        }
+
+    }
 
     function back(){
-        if(webPage != null && webPage.visible === true){
+        if(webPage !== null && webPage.visible === true){
             webPage.close();
             app.focus = true;
         } else {
             console.log("Back button from Add Details page clicked")
             app.steps--;
             previous("")
+            //stackView.pop(); //TO-DO
         }
     }
 }

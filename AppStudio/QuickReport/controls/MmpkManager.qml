@@ -9,14 +9,14 @@ Item {
     property string rootUrl: "http://www.arcgis.com/sharing/rest/content/items/"
     property string itemName: itemId > "" ? "%1.mmpk".arg(itemId) : ""
     property url fileUrl: [fileFolder.url, itemName].join("/")
-    property string subFolder: "QuickReport"
+    property string subFolder: "Offline"
     property int loadStatus: -1 //unknow = -1, loaded = 0, loading = 1, failed to load = 2
     property bool offlineMapExist: hasOfflineMap()
     property bool isPubished: false
 
     FileFolder{
         id: fileFolder
-        readonly property url storageBasePath: AppFramework.userHomeFolder.fileUrl("~/ArcGIS/AppStudio/Data")
+        readonly property url storageBasePath: AppFramework.userHomeFolder.fileUrl("ArcGIS/AppStudio/"+ app.itemId +"/Data")
         property url storagePath: subFolder && subFolder>"" ? storageBasePath + "/" + subFolder : storageBasePath
         url: storagePath
         Component.onCompleted: {

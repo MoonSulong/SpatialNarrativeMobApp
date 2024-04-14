@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 import QtQuick 2.7
 import QtQuick.Controls 2.2
-import Esri.ArcGISRuntime 100.5
+import Esri.ArcGISRuntime 100.10
 
 import QtQuick.Controls.Material 2.2
 
@@ -133,7 +133,7 @@ Column {
         if(app.isFromSaved){
             for(var i=0; i<codedCodeArray.length;i++){
                 var name = codedCodeArray[i];
-                if(attributesArray[fieldName] == name){
+                if(attributesArray[fieldName] === name){
                     comboBox.currentIndex = i;
                     console.log("comboBox.currentIndex", comboBox.currentIndex, name, attributesArray[fieldName])
                     break;
@@ -149,9 +149,19 @@ Column {
             }
             else {
                 try {
-                    var tempIndex = codedCodeArray.indexOf(attributesArray[fieldName])
-                    var defaultIndex = codedNameArray[codedCodeArray.indexOf(defaultValue)]
-                    comboBox.currentIndex = tempIndex>-1? tempIndex : defaultIndex;
+                    var fieldIndx = parseInt(attributesArray[fieldName])
+                    var tempIndex = -1
+                    if(fieldIndx >= 0)
+                         tempIndex = codedCodeArray.indexOf(attributesArray[fieldName])
+                    else
+                    {
+                     tempIndex = codedCodeArray.indexOf(attributesArray[fieldName])
+                    var defaultIndex = codedNameArray.indexOf[codedCodeArray.indexOf(defaultValue)]
+                    //comboBox.currentIndex = tempIndex>-1? tempIndex : defaultIndex;
+
+                    }
+                     comboBox.currentIndex = tempIndex>-1? tempIndex : defaultIndex;
+
                 } catch(e) {
 
                 }

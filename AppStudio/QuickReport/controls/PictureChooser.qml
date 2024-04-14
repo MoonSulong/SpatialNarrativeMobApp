@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,8 @@ Item {
     id: pictureChooser
 
     property string title: qsTr("Pictures")
-    property alias outputFolder: outputFolder
+    property FileFolder outputFolder
+    //property alias outputFolder: outputFolder
     property bool copyToOutputFolder: true
     property bool useFileDialog: Qt.platform.os != "ios"
 
@@ -44,35 +45,39 @@ Item {
         property var uiComponent
     }
 
-    FileFolder {
-        id: outputFolder
-
-    }
 
     //--------------------------------------------------------------------------
 
     Component {
         id: fileDialogComponent
 
+
         FileDialog {
+            id: fileDialog
             title: pictureChooser.title
-
             folder: Qt.platform.os == "ios"
-                    ? "file:assets-library://"
-                    : AppFramework.standardPaths.standardLocations(StandardPaths.PicturesLocation)[0]
-
+                    ? "file:assets-library://":shortcuts.pictures
             nameFilters: ["Image files (*.jpg *.png *.gif *.jpeg *.tif *.tiff)"]
-
             onAccepted: {
-                pictureUrl = fileUrl;
-                pictureChooser.accepted();
-
+                // console.log("You chose: " + fileDialog.fileUrl)
+                if(fileDialog.fileUrl)
+                {
+                    pictureUrl = fileDialog.fileUrl
+                    var didload = imageObject.load(pictureUrl)
+                    if(didload)
+                    {
+                        pictureChooser.accepted()
+                        var fileInfo = AppFramework.fileInfo(fileDialog.fileUrl);
+                    }
+                }
             }
-
             onRejected: {
                 pictureChooser.rejected();
             }
+
         }
+
+
     }
 
     //--------------------------------------------------------------------------
@@ -249,18 +254,22 @@ Item {
 
     onAccepted: {
         internal.uiComponent = null;
-
         var pictureUrlInfo = AppFramework.urlInfo(pictureUrl);
         var picturePath = pictureUrlInfo.localFile;
         var assetInfo = AppFramework.urlInfo(picturePath);
         var outputFileName;
+        var suffix=""
+        if(pictureUrlInfo.fileName)
+            suffix = pictureUrlInfo.fileName.split('.')[1]
+        if(!suffix)
+            suffix="jpg"
 
         if (assetInfo.scheme === "assets-library") {
             pictureUrl = assetInfo.url;
             outputFileName = assetInfo.queryParameters.id + "." + assetInfo.queryParameters.ext;
         } else {
-            outputFileName = AppFramework.createUuidString(2) + "." + AppFramework.fileInfo(picturePath).suffix;
-            console.log("outputFileName", outputFileName);
+            outputFileName = AppFramework.createUuidString(2) + "." + suffix
+            //console.log("outputFileName", outputFileName);
         }
 
         photoReady = true;
@@ -281,9 +290,12 @@ Item {
                     console.error("Unable to save image:", outputFileInfo.filePath);
                     return;
                 }
+                picturePath = outputFolder.filePath(outputFileName);
             } else {
+                //imageObject.load(pictureUrl)
                 outputFolder.removeFile(outputFileName);
-                outputFolder.copyFile(picturePath, outputFileInfo.filePath);
+                var issaved = imageObject.save(outputFileInfo.filePath)
+                //outputFolder.copyFile(picturePath, outputFileInfo.filePath);
             }
 
             picturePath = outputFolder.filePath(outputFileName);

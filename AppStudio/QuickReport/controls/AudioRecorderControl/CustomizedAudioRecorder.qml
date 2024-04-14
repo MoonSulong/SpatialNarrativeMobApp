@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -184,7 +184,7 @@ Page {
     FileFolder{
         id: audioFolder
 
-        path: "~/ArcGIS/QuickReport/Audio"
+        path: "~/ArcGIS/AppStudio/"+ app.itemId +"/Data/Audio"
 
         Component.onCompleted: {
             makeFolder();

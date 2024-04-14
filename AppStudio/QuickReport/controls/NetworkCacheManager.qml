@@ -13,7 +13,7 @@ Item {
 
     FileFolder{
         id: fileFolder
-        readonly property url storageBasePath: AppFramework.userHomeFolder.fileUrl("ArcGIS/AppStudio/cache")
+        readonly property url storageBasePath: AppFramework.userHomeFolder.fileUrl("ArcGIS/AppStudio/"+ app.itemId +"/Data/cache")
         property url storagePath: subFolder&&subFolder>"" ? storageBasePath + "/" + subFolder : storageBasePath
         url: storagePath
         Component.onCompleted: {

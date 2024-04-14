@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import ArcGIS.AppFramework 1.0
 import QtQuick.Controls 2.1 as NewControls
 import QtQuick.Controls.Material 2.1 as MaterialStyle
 
+import "../widgets"
+
 NewControls.Dialog {
     id: calendarAndTimeDialog
 
@@ -36,18 +38,17 @@ NewControls.Dialog {
     padding: 0
     topPadding: 0
     bottomPadding: 0
-
     property int theme: MaterialStyle.Material.Light
 
     MaterialStyle.Material.theme: theme
 
-    standardButtons: NewControls.Dialog.Ok | NewControls.Dialog.Cancel
+    //    standardButtons: NewControls.Dialog.Ok | NewControls.Dialog.Cancel
     modal: true
     closePolicy: NewControls.Dialog.NoAutoClose
     MaterialStyle.Material.accent: MaterialStyle.Material.theme === MaterialStyle.Material.Dark? "#E0E0E0" : primaryColor
 
-    property bool isMiniMode: calendarAndTimeDialog.height<399
-    property var selectedDateAndTime: {return new Date()}
+    property bool isMiniMode: calendarAndTimeDialog.height < 399
+    property var selectedDateAndTime: { return new Date() }
     property real dateMilliseconds: selectedDateAndTime.valueOf()
 
     property color primaryColor: "#009688"
@@ -64,13 +65,13 @@ NewControls.Dialog {
 
         RowLayout{
             anchors.fill: parent
-            anchors.margins: 8*AppFramework.displayScaleFactor
+            anchors.margins: 8 * AppFramework.displayScaleFactor
             Item{
                 Layout.preferredWidth: parent.width/5*3
                 Layout.fillHeight: true
                 ColumnLayout {
                     anchors.fill: parent
-                    opacity: swipeView.currentIndex == 0? 1:0.7
+                    opacity: swipeView.currentIndex == 0 ? 1 : 0.7
                     clip: true
                     spacing: 0
                     NewControls.Label {
@@ -83,7 +84,7 @@ NewControls.Dialog {
                         color: "white"
                         padding: 0
                         font {
-                            pixelSize: height*0.7
+                            pixelSize: (parent.height/2.5)*0.7
                         }
                     }
 
@@ -95,7 +96,7 @@ NewControls.Dialog {
                         verticalAlignment: Text.AlignVCenter
                         padding: 0
                         font {
-                            pixelSize: height*0.7
+                            pixelSize: (1.5 * parent.height/2.5) * 0.7
                             bold: true
                         }
                         color: "white"
@@ -105,7 +106,7 @@ NewControls.Dialog {
                 MouseArea{
                     anchors.fill: parent
                     onClicked: {
-                        if(swipeView.currentIndex==1) swipeView.decrementCurrentIndex();
+                        if(swipeView.currentIndex === 1) swipeView.decrementCurrentIndex();
                     }
                 }
             }
@@ -116,13 +117,13 @@ NewControls.Dialog {
 
                 ColumnLayout{
                     anchors.fill: parent
-                    opacity: swipeView.currentIndex == 1? 1:0.7
+                    opacity: swipeView.currentIndex === 1 ? 1 : 0.7
                     clip: true
                     spacing: 0
                     NewControls.Label {
-                        Layout.preferredHeight: parent.height/2.5
-                        Layout.fillWidth: true
 
+                        Layout.preferredHeight: parent.height / 2.5
+                        Layout.fillWidth: true
                         text: timePicker.apString
                         elide: Text.ElideRight
                         verticalAlignment: Text.AlignVCenter
@@ -130,11 +131,12 @@ NewControls.Dialog {
                         color: "white"
                         padding: 0
                         font {
-                            pixelSize: height*0.7
+                            pixelSize: (parent.height / 2.5) * 0.7
                         }
                     }
 
                     NewControls.Label {
+
                         Layout.fillHeight: true
                         Layout.fillWidth: true
                         fontSizeMode: Label.Fit
@@ -143,7 +145,7 @@ NewControls.Dialog {
                         horizontalAlignment: Text.AlignRight
                         padding: 0
                         font {
-                            pixelSize: height*0.7
+                            pixelSize: (1.5 * parent.height / 2.5) * 0.7
                             bold: true
                         }
 
@@ -151,15 +153,14 @@ NewControls.Dialog {
                     }
                 }
 
-                MouseArea{
+                MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        if(swipeView.currentIndex==0) swipeView.incrementCurrentIndex();
+                        if(swipeView.currentIndex === 0) swipeView.incrementCurrentIndex();
                     }
                 }
             }
         }
-
     }
 
     ColumnLayout {
@@ -204,10 +205,71 @@ NewControls.Dialog {
 
             count: swipeView.count
             currentIndex: swipeView.currentIndex
-            scale: calendarAndTimeDialog.isMiniMode? 0.5:1
+            scale: calendarAndTimeDialog.isMiniMode? 0.5 : 1
             Layout.alignment: Qt.AlignHCenter
         }
+    }
 
+
+    footer: Rectangle {
+        id: item
+        width: parent.width
+        height: calendarAndTimeDialog.height / 8
+        color: "transparent"
+        clip: true
+        anchors.bottom: parent.Bottom
+        radius: 5 * AppFramework.displayScaleFactor
+
+        RowLayout {
+            id: footerRow
+            anchors.fill: parent
+
+            CustomDialogButton {
+                id: todayButton
+                primaryColor: calendarAndTimeDialog.primaryColor
+
+                Layout.preferredHeight: parent.height
+                Layout.alignment: Qt.AlignLeft
+                Layout.leftMargin: 10 * AppFramework.displayScaleFactor
+                visible: swipeView.currentIndex === 0
+                customText: app.today_string
+                onClicked: {
+                    calendar.selectedDate = new Date();
+                }
+            }
+
+            Item {
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+            }
+
+            CustomDialogButton {
+                id: cancelButton
+
+                Layout.preferredHeight: parent.height
+                Layout.preferredWidth: implicitWidth
+
+                primaryColor: calendarAndTimeDialog.primaryColor
+                customText: app.cancel_string
+                onClicked: {
+                    calendarAndTimeDialog.reject();
+                }
+            }
+
+            CustomDialogButton {
+                id: okayButton
+
+                Layout.preferredHeight: parent.height
+                Layout.preferredWidth: implicitWidth
+                Layout.alignment: Qt.AlignRight
+                Layout.rightMargin: 10 * AppFramework.displayScaleFactor
+                primaryColor: calendarAndTimeDialog.primaryColor
+                customText: app.ok_String
+                onClicked: {
+                    calendarAndTimeDialog.accept();
+                }
+            }
+        }
     }
 
     function updateDateAndTime(){

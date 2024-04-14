@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import QtQuick.Layouts 1.1
 
 import ArcGIS.AppFramework 1.0
 
-import Esri.ArcGISRuntime 100.5
+import Esri.ArcGISRuntime 100.10
 
 import "../images"
 import "../controls"

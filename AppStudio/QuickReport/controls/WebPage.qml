@@ -5,6 +5,7 @@ import QtGraphicalEffects 1.0
 import ArcGIS.AppFramework.WebView 1.0
 
 import ArcGIS.AppFramework 1.0
+import "../controls"
 
 Page {
 
@@ -38,12 +39,12 @@ Page {
             console.debug("go back");
         }
 
-        var path = AppFramework.userHomeFolder.filePath("~/ArcGIS/AppStudio/Data");
+        //var path = AppFramework.userHomeFolder.filePath("ArcGIS/AppStudio/Data");
         var arr = helpPageUrl.split("/");
         var resourceFolderName = arr[0];
         var resourceFileName = arr[1];
+        var resourceFolder = AppFramework.fileFolder(app.folder.folder(resourceFolderName).path)
 
-        var resourceFolder = AppFramework.fileFolder(path);
         var html = resourceFolder.readTextFile(resourceFileName);
 
         webItem.loadHtml(html, "http://www.example.com#"+id);
@@ -61,7 +62,7 @@ Page {
 
     property color headerColor: app.headerBackgroundColor
 
-   footer.implicitHeight: 0
+    //footer.implicitHeight: 0
 
     header:  Rectangle {
         id: headerContainer
@@ -111,12 +112,13 @@ Page {
         visible: source.visible
     }
 
-    contentData: WebView {
+    content: WebView {
         id: webItem
         width: parent.width
         height: parent.height
         url: link
         clip: true
+
 
         BusyIndicator {
             visible: running
@@ -133,7 +135,7 @@ Page {
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 20 * app.scaleFactor
             anchors.horizontalCenter: parent.horizontalCenter
-            wrapMode: Text.WrapAnywhere
+            wrapMode:Text.WrapAnywhere
             z: webItem.z + 1
             textFormat: Text.StyledText
             maximumLineCount: 2

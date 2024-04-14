@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import ArcGIS.AppFramework 1.0
 import ArcGIS.AppFramework.InterAppCommunication 1.0
 import ArcGIS.AppFramework.Platform 1.0
 
-import Esri.ArcGISRuntime 100.2
+import Esri.ArcGISRuntime 100.10
 
 import "../controls"
 
@@ -278,13 +278,14 @@ Rectangle {
 
                 RowLayout {
                     anchors.centerIn: parent
-                    spacing: 48 * app.scaleFactor
+                    spacing: 24 * app.scaleFactor
                     Layout.fillHeight: true
                     Layout.fillWidth: false
 
+                    // this icon is for Report
                     Icon {
                         containerSize: app.isSmallScreen ? app.units(96) : app.units(112)
-                        imageSize: 0.7 * containerSize
+                        imageSize: 0.8 * containerSize
                         backgroundColor: app.buttonColor
                         imageSource: "../images/ic_note_add_white_48dp.png"
 
@@ -295,20 +296,13 @@ Rectangle {
                                 alertBox.visible = true;
                                 return;
                             }
-                            if(!(Permission.checkPermission(Permission.PermissionTypeStorage) === Permission.PermissionResultGranted))
-                            {
-                                if(Qt.platform.os === "android"){
-                                    app.showStorageAccessDialog()
-                                    return;
-                                }
-                            }
 
                             app.clearData();
                             isFromSaved = false
                             getAllSchemas();
                         }
 
-                        iconText.text : qsTr("New")
+                        iconText.text : qsTr("Report")
                         iconText.font.pixelSize: app.textFontSize
                         iconText.font.family: app.customTextFont.name
                         iconText.color: app.textColor
@@ -316,24 +310,37 @@ Rectangle {
                         isDebug: false
                     }
 
+                    // this icon is for query reports in ArcGIS
                     Icon {
                         containerSize: app.isSmallScreen ? app.units(96) : app.units(112)
-                        imageSize: 0.7 * containerSize
-                        backgroundColor: "gray"
+                        imageSize: 0.8 * containerSize
+                        backgroundColor: app.buttonColor
+                        imageSource: "../images/ic_search_black_48dp.png"
+
+                        onIconClicked: {
+                            // changes on 2021-12-11;
+                            app.initSubmittedReportsPage();
+                        }
+
+                        iconText.text : qsTr("Search")
+                        iconText.font.pixelSize: app.textFontSize
+                        iconText.font.family: app.customTextFont.name
+                        iconText.color: app.textColor
+
+                        isDebug: false
+                    }
+
+                    // this icon is for viewing db draft
+                    Icon {
+                        containerSize: app.isSmallScreen ? app.units(96) : app.units(112)
+                        imageSize: 0.8 * containerSize
+                        backgroundColor: app.buttonColor //"gray"
                         imageSource: "../images/ic_drafts_white_48dp.png"
 
                         isDebug: false
 
                         onIconClicked: {
-                            if(!(Permission.checkPermission(Permission.PermissionTypeStorage) === Permission.PermissionResultGranted))
-                            {
-                                if(Qt.platform.os === "android"){
-
-                                    app.showStorageAccessDialog()
-                                    return;
-                                }
-                            }
-
+                            // changes on 2021-12-09;
                             app.initSavedReportsPage();
                         }
 
@@ -668,31 +675,20 @@ Rectangle {
               "<br>" + " AppStudio Version:" + AppFramework.version
         html: true
 
-        onComposeError: {
+        onErrorChanged: {
+            var reason = error.errorCode
             switch (reason) {
-
-            case EmailComposer.MailClientOpenFailed:
-                messageDialog.open();
-                message.text = qsTr("Cannot open mail client.");
-                break;
-            case EmailComposer.MailServiceNotConfigured:
+            case EmailComposerError.ErrorServiceMissing:
                 Qt.openUrlExternally(app.generateFeedbackEmailLink());
                 break;
-            case EmailComposer.PlatformNotSupported:
+            case EmailComposerError.ErrorNotSupportedFeature:
                 messageDialog.open();
                 message.text = qsTr("Platform not supported.");
                 break;
-            case EmailComposer.SendFailed:
-                messageDialog.open();
-                message.text = qsTr("Failed to send email.");
-                break;
-            case EmailComposer.SaveFailed:
-                messageDialog.open();
-                message.text = qsTr("Failed to save email.");
-                break;
+
             default:
                 messageDialog.open();
-                message.text = qsTr("Unknown error.");
+                message.text = ("%1:%2".arg(error.errorCode).arg(error.errorMessage));
             }
         }
     }
@@ -718,14 +714,14 @@ Rectangle {
     }
 
     function back(){
-        if (webPage !== null && webPage.visible === true){
+        if (webPage && webPage.visible === true){
             webPage.close();
             app.focus = true;
         } else if (menu.visible === true){
             menu.hide();
-        } else if (aboutPage.visible === true){
+        } else if (aboutPage && aboutPage.visible === true){
             aboutPage.hide()
-        } else if (settingsPage.visible === true){
+        } else if (settingsPage && settingsPage.visible === true){
             settingsPage.back();
         } else if(mmpkDialog.visible == true) {
             mmpkDialog.visible = false;

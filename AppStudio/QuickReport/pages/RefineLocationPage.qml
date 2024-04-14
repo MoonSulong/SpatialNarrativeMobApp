@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,15 +27,16 @@ import ArcGIS.AppFramework.Networking 1.0
 import ArcGIS.AppFramework.Platform 1.0
 import QtQuick.Controls.Material 2.2
 
-import Esri.ArcGISRuntime 100.2
+import Esri.ArcGISRuntime 100.10
 
 import "../controls"
 
 
 Rectangle {
     id: refineLocationPage
-    width: parent.width
-    height: parent.height
+    objectName: "refineLocationPage"
+    width: parent?parent.width:0
+    height: parent?parent.height:0
     color: app.pageBackgroundColor
     signal next(string message)
     signal previous(string message)
@@ -78,18 +79,6 @@ Rectangle {
     property bool menuloaded: false
     Material.accent: Material.Grey
 
-    //=============================== edit for filter =====================================================
-    property real scaleFactor: AppFramework.displayScaleFactor
-    property string displayText: "Click or tap to select features."
-
-    //============================ edit for feature attribute and attachment===============================
-    property real curIndx: -1
-    property string url: ""
-
-    ListModel{
-        id:displayAttributesModel
-    }
-    //=============================== edit for filter =====================================================
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
@@ -122,6 +111,13 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: {
+                    var stackitem = stackView.get(stackView.depth - 2) //var stackitem = stackView.get(stackView.depth - 2)
+                    if(stackitem.objectName === "summaryPage")
+                    {
+                        processInput()
+                        app.populateSummaryObject()
+                        app.steps++;
+                    }
                     skipPressed = false;
                     positionSource.active = false;
                     app.steps--;
@@ -130,6 +126,7 @@ Rectangle {
             }
 
             CarouselSteps{
+                id:carousal
                 height: parent.height
                 anchors.centerIn: parent
                 items: app.numOfSteps
@@ -140,7 +137,7 @@ Rectangle {
                 source: "../images/ic_send_white_48dp.png"
                 height: 30 * app.scaleFactor
                 width: 30 * app.scaleFactor
-                visible: app.isFromSaved
+                visible:false // app.isFromSaved
                 enabled: app.isFromSaved && app.isReadyForSubmitReport && app.isOnline
                 opacity: enabled? 1:0.3
                 checkedColor : "transparent"
@@ -196,7 +193,15 @@ Rectangle {
                 MouseArea{
                     anchors.fill: parent
                     onClicked: {
-                        app.openWebView(1, { pageId: refineLocationPage, url: "" + 2 });
+                        if(app.helpPageUrl && validURL(app.helpPageUrl))
+                            app.openWebView(0, {  url: app.helpPageUrl });
+                        else
+                        {
+                            var component = webPageComponent;
+                            webPage = component.createObject(refineLocationPage);
+                            webPage.openSectionID(""+2)
+                        }
+                        //app.openWebView(1, { pageId: refineLocationPage, url: "" + 2 });
                     }
                 }
             }
@@ -218,7 +223,7 @@ Rectangle {
             font.pixelSize: app.subtitleFontSize
             font.family: app.customTextFont.name
             color: app.textColor
-            visible: AppFramework.network.isOnline && !isFullMap
+            visible:Networking.isOnline && !isFullMap
             wrapMode: Text.Wrap
             fontSizeMode: Text.Fit
             Layout.preferredWidth: Math.min(parent.width*0.80, 600*app.scaleFactor)
@@ -252,6 +257,7 @@ Rectangle {
                     if(refineLocationPage.currentExt){
                         mapView.setViewpointGeometry(refineLocationPage.currentExt);
                     }
+                    mapView.initGeometry()
                 }
             }
         }
@@ -259,16 +265,6 @@ Rectangle {
         Map{
             id: webMap
             initUrl: app.webMapRootUrl + app.webMapID
-
-            FeatureLayer {
-                id: featureLayer
-
-                // feature table
-                ServiceFeatureTable {
-                    id: featureTable
-                    url: app.featureLayerURL;
-                }
-            }
         }
 
         MapView{
@@ -315,7 +311,7 @@ Rectangle {
 
             LocatorTask {
                 id: locatorTask
-                url: "http://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer"
+                url: "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer"
                 suggestions.suggestParameters: SuggestParameters{
                     maxResults: 4
                     //countryCode: app.countryCode
@@ -351,7 +347,7 @@ Rectangle {
                         reloadMapTimer.stop();
                         var currentPositionPoint
                         if(theNewPoint) currentPositionPoint = theNewPoint;
-                        else currentPositionPoint = ArcGISRuntimeEnvironment.createObject("Point", {x: positionSource.position.coordinate.longitude, y: positionSource.position.coordinate.latitude, spatialReference: SpatialReference.createWgs84()});
+                        else currentPositionPoint = ArcGISRuntimeEnvironment.createObject("Point", {x: positionSource.position.coordinate.longitude, y: positionSource.position.coordinate.latitude, spatialReference: Factory.SpatialReference.createWgs84()});
 
                         var viewPointCenter = GeometryEngine.project(currentPositionPoint, mapView.spatialReference);
 
@@ -441,8 +437,8 @@ Rectangle {
                     if(polygonBuilder === null || polygonBuilder === undefined) {
                         polygonBuilder = ArcGISRuntimeEnvironment.createObject("PolygonBuilder", {spatialReference: mapView.spatialReference, geometry: app.polygonObj});
                     }
-                    var newGeometry1 = GeometryEngine.project(polygonBuilder.geometry, mapView.spatialReference);
-                    var ring = newGeometry1.json.rings[0];
+                    var newGeometry = GeometryEngine.project(polygonBuilder.geometry, mapView.spatialReference);
+                    var ring = newGeometry.json.rings[0];
                     var ringLength = ring.length;
                     polygonBuilder = ArcGISRuntimeEnvironment.createObject("PolygonBuilder", {spatialReference: mapView.spatialReference});
                     var offset = (ring[0][0] === ring[1][0] && ring[0][1] === ring[1][1] && ring[1][0] === ring[2][0] && ring[1][1] === ring[2][1])? 2 : 1;
@@ -457,13 +453,13 @@ Rectangle {
                     if(polylineBuilder === null || polylineBuilder === undefined) {
                         polylineBuilder = ArcGISRuntimeEnvironment.createObject("PolylineBuilder", {spatialReference: mapView.spatialReference, geometry: app.polylineObj});
                     }
-                    var newGeometry2 = GeometryEngine.project(polylineBuilder.geometry, mapView.spatialReference);
-                    var path = newGeometry2.json.paths[0];
-                    var pathLength = path.length;
+                    var newGeometry = GeometryEngine.project(polylineBuilder.geometry, mapView.spatialReference);
+                    var path = newGeometry.json.paths[0];
+                    var pathLength = path?path.length:0;
                     if(pathLength === 2 && storedReadyForGeo === false) pathLength = pathLength - 1;
                     polylineBuilder = ArcGISRuntimeEnvironment.createObject("PolylineBuilder", {spatialReference: mapView.spatialReference});
-                    for(var j = 0; j< pathLength; j++){
-                        var point = ArcGISRuntimeEnvironment.createObject("Point", {x: path[j][0], y:path[j][1], spatialReference: mapView.spatialReference});
+                    for(var i=0; i< pathLength; i++){
+                        var point = ArcGISRuntimeEnvironment.createObject("Point", {x: path[i][0], y:path[i][1], spatialReference: mapView.spatialReference});
                         mapView.addPointToPolyline(point);
                         mapView.drawPoint(point);
                     }
@@ -476,16 +472,19 @@ Rectangle {
                             CoordinateFormatter.toLatitudeLongitude(mapView.currentViewpointCenter.center, Enums.LatitudeLongitudeFormatDecimalDegrees, 3)
                           :qsTr("No Location Available.");
                 if(captureType === "line"){
-                    detail = polylineBuilder.geometry? Math.abs(GeometryEngine.lengthGeodetic(polylineBuilder.geometry, Enums.LinearUnitIdMeters, Enums.GeodeticCurveTypeGeodesic)):0;
-                    if(polylineBuilder.parts.part(0).pointCount) isUndoable = true;
-                    else isUndoable = false;
-                    isReadyForGeo = (captureType === "line" && polylineBuilder.parts.part(0).pointCount>=2);
+                    detail = (polylineBuilder && polylineBuilder.geometry)? Math.abs(GeometryEngine.lengthGeodetic(polylineBuilder.geometry, Enums.LinearUnitIdMeters, Enums.GeodeticCurveTypeGeodesic)):0;
+
+                    if(polylineBuilder && polylineBuilder.parts.part(0) && polylineBuilder.parts.part(0).pointCount)
+                        isUndoable = true;
+                    else
+                        isUndoable = false;
+                    isReadyForGeo = (captureType === "line" && polylineBuilder.parts.part(0) && polylineBuilder.parts.part(0).pointCount>=2);
                     return detail;
                 } else if(captureType === "area"){
                     detail = polygonBuilder.geometry? Math.abs(GeometryEngine.areaGeodetic(polygonBuilder.geometry, Enums.AreaUnitIdSquareMeters, Enums.GeodeticCurveTypeGeodesic)):0;
                     if(polygonBuilder.parts.part(0).pointCount) isUndoable = true;
                     else isUndoable = false;
-                    isReadyForGeo = (captureType === "area" && polygonBuilder.parts.part(0).pointCount>=3);
+                    isReadyForGeo = (captureType === "area" && polygonBuilder.parts.part(0) && polygonBuilder.parts.part(0).pointCount>=3);
                     return detail;
                 }
                 return center + ""
@@ -501,11 +500,6 @@ Rectangle {
                         drawPoint(mapView.screenToLocation(mouse.x, mouse.y));
                     }
                 }
-
-                var tolerance = 22;
-                var returnPopupsOnly = false;
-                var maximumResults = 1000;
-                mapView.identifyLayerWithMaxResults(featureLayer, mouse.x, mouse.y, tolerance, returnPopupsOnly, maximumResults);
             }
 
             function drawPoint(point){
@@ -668,8 +662,7 @@ Rectangle {
 
             Item {
                 id: pane
-                //width: (isMini && !isFullMap)? 40*app.scaleFactor:(parent.width-32*app.scaleFactor)
-                width: (isMini)? 40*app.scaleFactor:(parent.width-32*app.scaleFactor)
+                width: (isMini && !isFullMap)? 40*app.scaleFactor:(parent.width-32*app.scaleFactor)
                 height: searchBar.height
                 anchors.right: parent.right
                 anchors.rightMargin: 16*app.scaleFactor
@@ -711,8 +704,7 @@ Rectangle {
                                     width: parent.width*0.7
                                     height: parent.height*0.7
                                     anchors.centerIn: parent
-                                    //source: !pane.isMini && !isFullMap? "../images/ic_keyboard_arrow_left_black_48dp.png":"../images/ic_search_black_48dp.png"
-                                    source: !pane.isMini ? "../images/ic_keyboard_arrow_left_black_48dp.png":"../images/ic_search_black_48dp.png"
+                                    source: !pane.isMini && !isFullMap? "../images/ic_keyboard_arrow_left_black_48dp.png":"../images/ic_search_black_48dp.png"
                                     fillMode: Image.PreserveAspectFit
                                     mipmap: true
                                 }
@@ -725,14 +717,14 @@ Rectangle {
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     onClicked: {
-                                        //if(isFullMap){
-                                        if(pane.isMini){
-                                            searchTextField.clear();
-                                            pane.isMini = false;
-                                        } else {
-                                            pane.isMini = true;
+                                        if(!isFullMap){
+                                            if(pane.isMini){
+                                                searchTextField.clear();
+                                                pane.isMini = false;
+                                            } else {
+                                                pane.isMini = true;
+                                            }
                                         }
-                                        //}
                                     }
                                 }
                             }
@@ -923,9 +915,14 @@ Rectangle {
                                         height: 30 * scaleFactor
                                         font.pixelSize: 12* scaleFactor
                                         leftPadding: 10 * scaleFactor
+
+
                                     }
                                 }
                             }
+
+
+
                         }
                     }
 
@@ -963,7 +960,6 @@ Rectangle {
                         }
                     }
 
-                    // location
                     Rectangle{
                         color: "white"
                         Layout.preferredHeight: parent.width
@@ -1134,6 +1130,63 @@ Rectangle {
                 }
             }
 
+            Rectangle {
+                id: locationAccuracy
+
+                property string distanceUnit: Qt.locale().measurementSystem === Locale.MetricSystem ? "m" : "ft"
+                property real accuracy: Qt.locale().measurementSystem === Locale.MetricSystem ? positionSource.position.horizontalAccuracy : 3.28084 * positionSource.position.horizontalAccuracy
+                property real threshold: Qt.locale().measurementSystem === Locale.MetricSystem ? (50/3.28084) : 50
+
+                visible:positionSource.active && positionSource.position.horizontalAccuracyValid && app.captureType==="point"
+
+                width: app.units(80)
+                height: width/3
+                radius: app.units(4)
+                color: "white"
+                clip: true
+
+                anchors {
+                    bottom: mapView.bottom
+                    left: mapView.left
+                    leftMargin: app.units(4)
+                    bottomMargin: app.units(4)
+                }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: app.units(4)
+
+                    Rectangle {
+                        Layout.preferredWidth: parent.width
+                        Layout.preferredHeight: parent.height
+                        radius: app.units(4)
+                        clip: true
+                        color: locationAccuracy.accuracy <= locationAccuracy.threshold ? "green" : "red"
+
+                        Text {
+                            anchors.centerIn: parent
+                            anchors.fill: parent
+                            verticalAlignment: Text.AlignVCenter
+                            horizontalAlignment: Text.AlignHCenter
+                            color: "white"
+                            text: "± %1 %2".arg(locationAccuracy.accuracy.toFixed(1)).arg(locationAccuracy.distanceUnit)
+                            fontSizeMode: Text.HorizontalFit
+                            font.pixelSize: app.textFontSize
+                            font.family: app.customTextFont.name
+                        }
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    preventStealing: true
+                    enabled: app.captureType === "point"
+                    onClicked: {
+                        page3_mapView.map.panTo(page3_mapView.map.positionDisplay.mapPoint)
+                    }
+                }
+            }
+
             Rectangle{
                 id: refreshButton
                 width: 48*app.scaleFactor
@@ -1193,448 +1246,20 @@ Rectangle {
                 }
             }
 
-            //=============================== edit for feature selection =====================================================
-            Row {
-                id: findRow
-
-                anchors {
-                    top: parent.top
-                    bottom: mapView.top
-                    left: parent.left
-                    right: parent.right
-                    margins: 10 * scaleFactor
-                }
-                spacing: 5
-
-                // customize ComboBox
-                ComboBox {
-                    id: comboBox
-
-                    Material.background: app.headerBackgroundColor
-
-                    currentIndex: 0
-                    model: ListModel {
-                        id: cbItems
-
-                        ListElement {
-                            text: "Filter by Topic"
-                        }
-
-                        ListElement {
-                            text: "Woods"
-                        }
-                        ListElement {
-                            text: "695"
-
-                        }
-                    }
-
-                    contentItem: Text {
-
-                        leftPadding: comboBox.indicator.width
-                        rightPadding: comboBox.indicator.width + comboBox.spacing
-
-                        text: comboBox.displayText
-                        font: comboBox.font
-                        color: "white"
-                        verticalAlignment: Text.AlignVCenter
-                        elide: Text.ElideRight
-                    }
-
-                    font: {
-                        pixelSize: app.textFontSize
-                        family: app.customTextFont.name
-                    }
-
-                    indicator: Canvas {
-                        id: indCanvas
-                        x: comboBox.width - width - comboBox.rightPadding
-                        y: comboBox.topPadding + (comboBox.availableHeight - height) / 2
-                        width: 12
-                        height: 8
-                        contextType: "2d"
-
-                        onPaint: {
-                            context.reset();
-                            context.moveTo(0, 0);
-                            context.lineTo(width, 0);
-                            context.lineTo(width / 2, height);
-                            context.closePath();
-                            context.fillStyle = "white"
-                            context.fill();
-                        }
-                    }
-
-                    width: 200
-
-                    enabled: featureTable.loadStatus === Enums.LoadStatusLoaded
-                    onCurrentIndexChanged:{
-
-                        console.debug(cbItems.get(currentIndex).text);
-                        if (currentIndex != 0)
-                            featureLayer.definitionExpression = "TOPIC LIKE '" + cbItems.get(currentIndex).text + "%'";
-                    }
-                }
-
-                // reset button
-                Button {
-                    Material.background: app.headerBackgroundColor
-                    Material.accent:app.black_87
-                    highlighted: true
-                    text: "Reset"
-                    enabled: featureTable.loadStatus === Enums.LoadStatusLoaded
-                    onClicked: {
-                        featureLayer.definitionExpression = "";
-                        comboBox.currentIndex = 0;
-                    }
-                }
-            }
-
-            onIdentifyLayerStatusChanged: {
-                if (identifyLayerStatus === Enums.TaskStatusCompleted) {
-                    // clear any previous selections
-                    featureLayer.clearSelection();
-                    displayAttributesModel.clear();
-
-                    // create an array to store the features
-                    var identifiedObjects = [];
-
-                    console.log(identifyLayerResult.geoElements.length);
-                    for (var i = 0; i < identifyLayerResult.geoElements.length; i++){
-                        var elem = identifyLayerResult.geoElements[i];
-                        //console.log(elem);
-                        identifiedObjects.push(elem);
-                        displayAttributesModel.append(elem);
-
-                    }
-                    // cache the number of identifyLayerResult
-                    var count = identifyLayerResult.geoElements.length;
-
-                    // select the features in the feature layer
-                    featureLayer.selectFeatures(identifiedObjects);
-                    displayText = "%1 %2 selected.".arg(count).arg(count > 1 ? "features" : "feature");
-                }
-            }
-            //! [identify feature layer qml api snippet]
-
-
-            Pane {
-                id: attributeViewDialog
-
-                anchors {
-                    left: parent.left
-                    right: parent.right
-                    bottom: messageBar.top
-                }
-
-                Material.primary: "white"
-                Material.elevation:2
-                padding: 5 * scaleFactor
-                visible: displayAttributesModel.count > 0
-
-                SwipeView{
-                    id:swipeView
-                    implicitHeight: 150 * scaleFactor
-                    implicitWidth: parent.width
-                    clip: true
-                    Repeater {
-                        model:displayAttributesModel
-                        Rectangle{
-                            color: "white"
-                            clip: true
-                            Flickable {
-                                anchors.fill:parent
-                                contentWidth:parent.width
-                                contentHeight: popupColumn.height
-                                clip: true
-                                flickableDirection: Flickable.VerticalFlick
-                                ColumnLayout {
-                                    id: popupColumn
-                                    width: parent.width //*  0.95
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    spacing: 3 * scaleFactor
-                                    clip: true
-                                    Text {
-                                        Layout.preferredWidth:  parent.width
-                                        id:itemDesc
-                                        text: "Observations " + "(" + curIndx + " of " + displayAttributesModel.count + ")"
-                                        elide: Text.ElideRight
-                                        color: "red"
-                                        font {
-                                            family: "Times New Roman"
-                                            pixelSize: 15 * scaleFactor
-                                            bold: true
-                                        }
-                                        renderType: Text.NativeRendering
-                                    }
-                                    Rectangle {
-                                        id:line
-                                        Layout.preferredWidth: parent.width
-                                        Layout.preferredHeight: 2 * scaleFactor
-                                        color: "red"
-                                    }
-
-                                    //======================= modify attribute ==================================
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        clip: true
-                                        spacing: 5 * scaleFactor
-
-                                        Text {
-                                            Layout.preferredWidth: popupColumn.width * 0.55
-                                            Layout.fillHeight: true
-                                            text:  "Topic"
-                                            wrapMode: Text.WrapAnywhere
-                                            font.pixelSize: 12 * scaleFactor
-                                            color: "gray"
-                                        }
-
-                                        Text {
-                                            Layout.fillWidth: true
-                                            Layout.fillHeight: true
-                                            text:attributes.attributeValue("Topic")
-                                            wrapMode: Text.WrapAnywhere
-                                            font.pixelSize: 12 * scaleFactor
-                                            color: "#4f4f4f"
-
-                                        }
-
-                                        Text {
-                                            Layout.preferredWidth: popupColumn.width * 0.55
-                                            Layout.fillHeight: true
-                                            text:  "Comment"
-                                            wrapMode: Text.WrapAnywhere
-                                            font.pixelSize: 12 * scaleFactor
-                                            color: "gray"
-                                        }
-
-                                        Text {
-                                            Layout.fillWidth: true
-                                            Layout.fillHeight: true
-                                            text:attributes.attributeValue("Comment")
-                                            wrapMode: Text.WrapAnywhere
-                                            font.pixelSize: 12 * scaleFactor
-                                            color: "#4f4f4f"
-
-                                        }
-
-                                        Text {
-                                            Layout.preferredWidth: popupColumn.width * 0.55
-                                            Layout.fillHeight: true
-                                            text:  "Attachment"
-                                            wrapMode: Text.WrapAnywhere
-                                            font.pixelSize: 12 * scaleFactor
-                                            color: "gray"
-                                        }
-
-                                        // ===================show attached img====================================
-                                        Repeater {
-                                            model:attachments
-                                            // show the attachment's URL if it is an image
-                                            Image {
-                                                id: img
-                                                width: 44 * scaleFactor
-                                                height: width
-
-                                                fillMode: Image.PreserveAspectFit
-                                                source: attachmentUrl
-
-                                                sourceSize.width: 44 * scaleFactor
-                                                sourceSize.height: 44 * scaleFactor
-                                                onSourceChanged: {
-                                                    //console.log(source)
-                                                }
-
-                                                MouseArea {
-                                                    anchors.fill: parent
-                                                    onClicked: {
-
-                                                        url = source
-
-                                                        callout.y = messageBar.y - swipeView.height + line.y
-
-                                                        callout.visible = true
-                                                    }
-                                                }
-
-                                            }
-
-                                        }
-
-                                    }
-
-
-                                }
-                            }
-                        }
-                    }
-
-                    //================================update ob index==================================
-
-                    onCurrentIndexChanged: {
-                        if(currentIndex < 0)return;
-                        curIndx = currentIndex + 1
-                    }
-
-                }
-
-            }
-
-            //==============================img popout==========================================
-            Rectangle {
-                id: callout
-                width: swipeView.width
-                height: swipeView.height - 25 * scaleFactor
-                anchors.horizontalCenter: parent.horizontalCenter
-                radius: 5
-                border {
-                    color: "lightgrey"
-                    width: .5
-                }
-                visible: false
-
-                Image {
-                    id: zoomImg
-                    width: parent.width
-                    height: parent.height
-
-                    fillMode: Image.PreserveAspectFit
-                    source: url
-
-                    //sourceSize.width: parent.width
-                    //sourceSize.height: parent.height
-                    onSourceChanged: {
-                        console.log(source)
-                    }
-
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            callout.visible = false
-                        }
-                    }
-
-
-                }
-
-
-
-            }
-
-
-            Rectangle {
-                id: messageBar
-                anchors {
-                    left: parent.left
-                    right: parent.right
-                    bottom: mapView.bottom
-                }
-                height: 30 * scaleFactor
-                color: app.headerBackgroundColor
-                border {
-                    width: 0.5 * scaleFactor
-                    color: app.headerBackgroundColor
-                }
-
-                Text {
-                    id: msgText
-                    color: "white"
-                    anchors {
-                        verticalCenter: parent.verticalCenter
-                        left: parent.left
-                        leftMargin: 10 * scaleFactor
-                    }
-                    text: displayText
-                    font.pixelSize: 14 * scaleFactor
-                }
-            }
-
-            Rectangle {
-                id: locationAccuracy
-
-                property string distanceUnit: Qt.locale().measurementSystem === Locale.MetricSystem ? "m" : "ft"
-                property real accuracy: Qt.locale().measurementSystem === Locale.MetricSystem ? positionSource.position.horizontalAccuracy : 3.28084 * positionSource.position.horizontalAccuracy
-                property real threshold: Qt.locale().measurementSystem === Locale.MetricSystem ? (50/3.28084) : 50
-
-                visible:positionSource.active && positionSource.position.horizontalAccuracyValid && app.captureType==="point"
-
-                width: app.units(80)
-                height: width/3
-                radius: app.units(4)
-                color: "white"
-                clip: true
-
-                anchors {
-                    bottom: mapView.bottom
-                    right: mapView.right
-                    rightMargin: app.units(4)
-                    bottomMargin: app.units(4)
-                }
-
-                ColumnLayout {
-                    anchors.fill: parent
-                    spacing: app.units(4)
-
-                    Rectangle {
-                        Layout.preferredWidth: parent.width
-                        Layout.preferredHeight: parent.height
-                        radius: app.units(4)
-                        clip: true
-                        color: locationAccuracy.accuracy <= locationAccuracy.threshold ? "green" : "red"
-
-                        Text {
-                            anchors.centerIn: parent
-                            anchors.fill: parent
-                            verticalAlignment: Text.AlignVCenter
-                            horizontalAlignment: Text.AlignHCenter
-                            color: "white"
-                            text: "± %1 %2".arg(locationAccuracy.accuracy.toFixed(1)).arg(locationAccuracy.distanceUnit)
-                            fontSizeMode: Text.HorizontalFit
-                            font.pixelSize: app.textFontSize
-                            font.family: app.customTextFont.name
-                        }
-                    }
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    preventStealing: true
-                    enabled: app.captureType === "point"
-                    onClicked: {
-                        page3_mapView.map.panTo(page3_mapView.map.positionDisplay.mapPoint)
-                    }
-                }
-            }
-
 
         }
-
-        // function to form and execute the query
-        function query() {
-            // set the where clause
-            params.whereClause = "TOPIC LIKE '" + findText.text + "%'";
-
-            // start the query
-            featureTable.queryFeatures(params);
-
-            featureLayer.definitionExpression = params.whereClause;
-        }
-
-        //======================================================================
 
         Item{
             Layout.fillWidth: true
-            Layout.preferredHeight: 10*app.scaleFactor
+            Layout.preferredHeight: 8*app.scaleFactor
         }
 
-        // show long and lat
         Text {
             id: page3_geoDetailText
             textFormat: Text.StyledText
             Layout.preferredWidth: parent.width
             Layout.maximumWidth: 600 * app.scaleFactor
-            font.pixelSize: 0.8 * app.textFontSize
+            font.pixelSize: app.textFontSize
             font.family: app.customTextFont.name
             color: app.textColor
             maximumLineCount: 1
@@ -1655,6 +1280,7 @@ Rectangle {
             Layout.preferredWidth: parent.width * 0.6
             Layout.maximumWidth: 420*app.scaleFactor
             Layout.alignment: Qt.AlignHCenter
+            //defaultMargin: defaultMargin
             visible: !page3_geoDetailText.visible
             model: unitConvertModel
             Material.accent: app.headerBackgroundColor
@@ -1680,6 +1306,7 @@ Rectangle {
                 }
 
                 onPaint: {
+                    unitConverter.popup.y = isFullMap ? 40:20
                     context.reset();
 
                     context.moveTo(0, 0);
@@ -1693,6 +1320,8 @@ Rectangle {
 
             currentIndex: 0
 
+            popup.contentItem.implicitHeight:Math.min(250,unitConvertModel.count * 30)
+
             background: Rectangle {
                 id: rectCategory
                 width: unitConverter.width
@@ -1702,14 +1331,6 @@ Rectangle {
                 radius: 5*app.scaleFactor
 
             }
-
-
-            font: {
-                pixelSize: app.textFontSize
-                family: app.customTextFont.name
-                //color:app.black_87
-            }
-
 
             onRealValueChanged: {
 
@@ -1748,8 +1369,8 @@ Rectangle {
 
         Item{
             Layout.fillWidth: true
-            Layout.preferredHeight: 4*app.scaleFactor
-            //visible: !isFullMap
+            Layout.preferredHeight: 16*app.scaleFactor
+            visible: !isFullMap
         }
 
         Item {
@@ -1807,7 +1428,7 @@ Rectangle {
         cached: false
         radius: 5.0
         samples: 16
-        color: "white" //"#80000000"
+        color: "#80000000"
         smooth: true
         visible: source.visible
     }
@@ -1844,7 +1465,8 @@ Rectangle {
         }
     }
 
-    function nextPage(){
+    function processInput()
+    {
         if(app.captureType==="line"){
             if(mapView.currentViewpointCenter.center) {
                 app.polylineObj = polylineBuilder.geometry;
@@ -1886,7 +1508,11 @@ Rectangle {
         }
 
         positionSource.active = false;
+        app.locationDisplayText = unitConverter.displayText || page3_geoDetailText.text
+    }
 
+    function nextPage(){
+        processInput()
         next("");
     }
 
@@ -1909,7 +1535,7 @@ Rectangle {
         }
     }
 
-    ////=============================== offline =====================================================
+    //================================================================================
 
     ConfirmBox{
         id: downloadMMPKDialog
@@ -1920,6 +1546,17 @@ Rectangle {
         }
     }
 
+
+    Component.onCompleted: {
+        var stackitem = stackView.get(stackView.depth - 2)
+        if(stackitem.objectName === "summaryPage")
+        {
+            page3_button1.visible = false
+            carousal.visible = false
+
+        }
+
+    }
     function downloadMMPK(){
         offlineSwitchButton.enabled = false;
         app.mmpkManager.downloadOfflineMap(function(){
@@ -1934,13 +1571,29 @@ Rectangle {
 
     //================================================================================
 
+
+    Keys.onReleased: {
+        if (event.key === Qt.Key_Back) {
+            back()
+            event.accepted = true;
+        }
+    }
+
     function back(){
+        app.locationDisplayText = unitConverter.displayText || page3_geoDetailText.text
         if(invalidGeometryAlertBox.visible){
             invalidGeometryAlertBox.visible = false;
-        } else if(webPage !== null && webPage.visible === true){
+        } else if(webPage !== null && webPage !== undefined && webPage.visible === true){
             webPage.close();
             app.focus = true;
         } else {
+            var stackitem = stackView.get(stackView.depth - 1) // var stackitem = stackView.get(stackView.depth - 2)
+            if(stackitem.objectName === "summaryPage")
+            {
+                processInput()
+                app.populateSummaryObject()
+                app.steps++;
+            }
             skipPressed = false;
             positionSource.active = false;
             app.steps--;

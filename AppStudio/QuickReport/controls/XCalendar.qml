@@ -8,6 +8,7 @@ import QtQuick.Extras 1.4
 import QtQuick.Controls 2.1 as NewControls
 import QtQuick.Controls.Material 2.1 as MaterialStyle
 
+import QtGraphicalEffects 1.12
 import ArcGIS.AppFramework 1.0
 
 Calendar {
@@ -41,7 +42,9 @@ Calendar {
         }
 
         dayOfWeekDelegate: Item {
+            id: dayOfWeekDelegateItem
             height: Math.round(TextSingleton.implicitHeight*1.25)
+
             Label {
                 text: control.__locale.dayName(styleData.dayOfWeek, control.dayOfWeekFormat)
                 anchors.fill: parent
@@ -52,7 +55,8 @@ Calendar {
                 font {
                     pixelSize: Math.min(parent.height/1.75, parent.width/1.75)
                 }
-                minimumPixelSize: 21*AppFramework.displayScaleFactor
+
+                minimumPixelSize: 21 * AppFramework.displayScaleFactor
             }
         }
 
@@ -77,13 +81,14 @@ Calendar {
             readonly property color selectedDateTextColor: "#ededed"
             readonly property color differentMonthDateTextColor: "#bbb"
             readonly property color invalidDateColor: "#414141"
+
             Label {
                 id: dayDelegateText
                 text: styleData.date.getDate()
                 anchors.centerIn: parent
                 horizontalAlignment: Text.AlignRight
                 font {
-                    pixelSize: Math.min(parent.height/1.75, parent.width/1.75)
+                    pixelSize: Math.min(parent.height / 2, parent.width / 2)
                 }
                 color: {
                     var theColor = invalidDateColor;
@@ -92,6 +97,7 @@ Calendar {
                         theColor = styleData.visibleMonth ? sameMonthDateTextColor : differentMonthDateTextColor;
                         if (styleData.selected)
                             theColor = selectedDateTextColor;
+
                     }
                     theColor;
                 }
@@ -101,56 +107,144 @@ Calendar {
         navigationBar: Item {
             width: parent.width
             height: barHeight
+
             RowLayout {
                 anchors.fill: parent
+                spacing: 0
 
-                NewControls.ToolButton {
-                    Layout.preferredHeight: parent.height
-                    Layout.preferredWidth: parent.height
-                    onClicked: control.showPreviousMonth()
-                    flat: true
-                    indicator: Image{
-                        width: parent.width*0.7
-                        height: parent.height*0.7
-                        anchors.centerIn: parent
-                        source: MaterialStyle.Material.theme === MaterialStyle.Material.Dark? "../images/ic_keyboard_arrow_left_white_48dp.png" : "../images/ic_keyboard_arrow_left_black_48dp.png"
-                        fillMode: Image.PreserveAspectFit
-                        mipmap: true
+                Item {
+                    id: prevYearButtonWrapper
+                    Layout.preferredHeight: AppFramework.systemInformation.family === "phone" ? parent.height * 0.75 : parent.height
+                    Layout.preferredWidth: AppFramework.systemInformation.family === "phone" ? parent.height * 0.75 : parent.height
+
+                    NewControls.ToolButton {
+                        anchors.fill: parent
+
+                        onClicked: control.showPreviousYear()
+                        flat: true
+                        indicator: Image{
+                            id: doubleLeftArrow
+                            width: AppFramework.systemInformation.family === "phone" ? parent.width * 0.5 : parent.width * 0.4
+                            height: AppFramework.systemInformation.family === "phone" ? parent.height * 0.5 : parent.height * 0.4
+                            anchors.centerIn: parent
+                            source: "../images/Double_Left_4x.png"
+                            fillMode: Image.PreserveAspectFit
+                            mipmap: true
+                        }
+
+                        ColorOverlay {
+                            anchors.fill: doubleLeftArrow
+                            source: doubleLeftArrow
+                            color: MaterialStyle.Material.theme === MaterialStyle.Material.Dark ? "#fff" : "#000"
+                        }
                     }
                 }
 
-                Label {
+                Item {
+                    id: centerRowLayoutWrapper
                     Layout.fillHeight: true
                     Layout.fillWidth: true
 
-                    text: control.__locale.standaloneMonthName(control.visibleMonth) +" " + control.visibleYear
-                    elide: Text.ElideRight
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    color: MaterialStyle.Material.theme === MaterialStyle.Material.Dark? "#ededed":"#444"
-                    font {
-                        pixelSize: parent.height*0.40
-                        bold: true
+                    RowLayout {
+                        id: centerRowLayout
+                        anchors.centerIn: parent
+                        height: barHeight
+                        spacing: 0
+
+                        NewControls.ToolButton {
+                            Layout.maximumHeight: AppFramework.systemInformation.family === "phone" ? parent.height * 0.75 : parent.height
+                            Layout.maximumWidth: AppFramework.systemInformation.family === "phone" ? parent.height * 0.75: parent.height
+
+                            onClicked: {
+                                control.showPreviousMonth()
+                            }
+
+                            flat: true
+                            indicator: Image{
+                                id: singleLeftArrow
+                                width: AppFramework.systemInformation.family === "phone" ? parent.width * 0.5 : parent.width * 0.4
+                                height: AppFramework.systemInformation.family === "phone" ? parent.height * 0.5 : parent.height * 0.4
+                                anchors.centerIn: parent
+                                source: "../images/Single_left_4x.png"
+                                fillMode: Image.PreserveAspectFit
+                                mipmap: true
+                            }
+
+                            ColorOverlay {
+                                anchors.fill: singleLeftArrow
+                                source: singleLeftArrow
+                                color: MaterialStyle.Material.theme === MaterialStyle.Material.Dark? "#fff" : "000"
+                            }
+                        }
+
+                        Label {
+                            Layout.fillHeight: true
+                            Layout.fillWidth: true
+
+                            text: control.__locale.standaloneMonthName(control.visibleMonth, Locale.ShortFormat) + " " + control.visibleYear
+                            elide: Text.ElideRight
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            color: MaterialStyle.Material.theme === MaterialStyle.Material.Dark? "#ededed":"#444"
+                            font {
+                                pixelSize: AppFramework.systemInformation.family === "phone" ? parent.height * 0.30 : parent.height * 0.35
+                                bold: true
+                            }
+                        }
+
+                        NewControls.ToolButton {
+                            Layout.maximumHeight: AppFramework.systemInformation.family === "phone" ? parent.height * 0.75 : parent.height
+                            Layout.maximumWidth: AppFramework.systemInformation.family === "phone" ? parent.height * 0.75 : parent.height
+
+                            onClicked: control.showNextMonth()
+                            flat: true
+                            indicator: Image{
+                                id: singleRightArrow
+                                width: AppFramework.systemInformation.family === "phone" ? parent.width * 0.5 : parent.width * 0.4
+                                height: AppFramework.systemInformation.family === "phone" ? parent.height * 0.5 : parent.height * 0.4
+                                anchors.centerIn: parent
+                                source: "../images/Single_Right_4x.png"
+                                fillMode: Image.PreserveAspectFit
+                                mipmap: true
+                            }
+
+                            ColorOverlay {
+                                anchors.fill: singleRightArrow
+                                source: singleRightArrow
+                                color: MaterialStyle.Material.theme === MaterialStyle.Material.Dark ? "#fff" : "#000"
+                            }
+                        }
                     }
                 }
 
-                NewControls.ToolButton {
-                    Layout.preferredHeight: parent.height
-                    Layout.preferredWidth: parent.height
-                    onClicked: control.showNextMonth()
-                    flat: true
-                    indicator: Image{
-                        width: parent.width*0.7
-                        height: parent.height*0.7
-                        anchors.centerIn: parent
-                        source: MaterialStyle.Material.theme === MaterialStyle.Material.Dark? "../images/ic_keyboard_arrow_left_white_48dp.png" : "../images/ic_keyboard_arrow_left_black_48dp.png"
-                        fillMode: Image.PreserveAspectFit
-                        rotation: 180
-                        mipmap: true
+                Item {
+                    id: nextYearButtonWrapper
+                    Layout.preferredHeight: AppFramework.systemInformation.family === "phone" ? parent.height * 0.75 : parent.height
+                    Layout.preferredWidth: AppFramework.systemInformation.family === "phone" ? parent.height * 0.75 : parent.height
+
+                    NewControls.ToolButton {
+                        anchors.fill: parent
+
+                        onClicked: control.showNextYear()
+                        flat: true
+                        indicator: Image{
+                            id: doubleRightArrow
+                            width: AppFramework.systemInformation.family === "phone" ? parent.width * 0.5 : parent.width * 0.4
+                            height: AppFramework.systemInformation.family === "phone" ? parent.height * 0.5 : parent.height * 0.4
+                            anchors.centerIn: parent
+                            source: "../images/Double_Right_4x.png"
+                            fillMode: Image.PreserveAspectFit
+                            mipmap: true
+                        }
+
+                        ColorOverlay {
+                            anchors.fill: doubleRightArrow
+                            source: doubleRightArrow
+                            color: MaterialStyle.Material.theme === MaterialStyle.Material.Dark ? "#fff" : "#000"
+                        }
                     }
                 }
             }
-
         }
     }
 }

@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import ArcGIS.AppFramework.Notifications 1.0
 import ArcGIS.AppFramework.WebView 1.0
 import ArcGIS.AppFramework 1.0
 
-import Esri.ArcGISRuntime 100.5
+import Esri.ArcGISRuntime 100.10
 import ArcGIS.AppFramework.Sql 1.0
 import ArcGIS.AppFramework.Platform 1.0
 
@@ -37,7 +37,7 @@ import "controls"
 import "pages"
 import QtQuick.Controls.Material 2.1
 
-//import "../controls" as Controls
+
 
 App {
     id: app
@@ -52,7 +52,7 @@ App {
 
     property bool isSmallScreen: (width || height) < units(550) || (AppFramework.systemInformation.family === "phone")
     property bool isPortrait: app.height > app.width
-
+    property real maximumScreenWidth: app.width > 1000 * scaleFactor ? 800 * scaleFactor : 568 * scaleFactor
     property bool isIPhoneX: false
 
     property bool featureServiceInfoComplete : false
@@ -72,6 +72,17 @@ App {
     property bool isReadyForSubType: true
     property bool isReadyForSubmitReport: isReadyForAttachments && isReadyForGeo && isReadyForDetails && isReadyForSubType
     property bool useGlobalIDForEditing:false
+    readonly property string theme: qsTr("Theme")
+    property string defaultTheme:app.settings.value("appDefaultTheme",app.automatic)
+    readonly property string automatic: qsTr("Automatic")
+    property color blk_140: app.isDarkMode ? "#BFBFBF" : "#6A6A6A"
+    readonly property string light: qsTr("Light")
+    readonly property string dark: qsTr("Dark")
+    readonly property url theme_select:"./images/done-48px.png"
+
+
+    // Animation on AboutPage
+    readonly property int normalDuration: 250
 
     function updateSavedReportsCount() {
         var count = 0;
@@ -96,6 +107,24 @@ App {
 
     // special flag for mmpk
     property bool mmpkSecureFlag: true
+
+    Connections {
+        target: Platform
+        onSystemThemeChanged: {
+            console.error("ThemeChanged current: ", Platform.systemTheme.mode);
+            if(app.defaultTheme === app.automatic)
+            {
+                if (Platform.systemTheme.mode === SystemTheme.Dark) {
+                    app.isDarkMode = true
+                    app.settings.setValue("isDarkMode", app.isDarkMode);
+                } else if (Platform.systemTheme.mode === SystemTheme.Light) {
+                    app.isDarkMode = false
+                    app.settings.setValue("isDarkMode", app.isDarkMode);
+                }
+            }
+
+        }
+    }
 
     Connections {
         target: AppFramework.network
@@ -131,20 +160,24 @@ App {
     property bool supportMedia: Qt.platform.os != "windows" && app.supportVideoRecorder
 
     // fonts
-    property int baseFontSize: app.info.propertyValue("baseFontSize", 20)
+    property int baseFontSize:app.info.propertyValue("baseFontSize", 20)
     property string customTitleFontTTF: app.info.propertyValue("customTitleFontTTF","");
     property string customTextFontTTF: app.info.propertyValue("customTextFontTTF","")
+
+    property alias baseFontFamily: customTextFont.name
+    property alias titleFontFamily: customTitleFont.name
 
     property int headingFontSize: 1.8 * titleFontSize
     property int titleFontSize: baseFontSize * scaleFactor * fontScale
     property int subtitleFontSize: 0.7 * titleFontSize
+    property int popupFontSize: 0.7 * titleFontSize
     property int textFontSize: 0.8 * titleFontSize
     property real fontScale: app.settings.value("fontScale", 1.0);
     property int isDarkMode: app.settings.value("isDarkMode", 0);
     property bool isSortDomainByAlphabetical: app.info.propertyValue("sortDomainByAlphabetical", false);
     property string payloadUrl:app.info.propertyValue("payloadUrl", "");
     property bool isTablet: (Math.max(app.width, app.height) > 1000 * scaleFactor) || (AppFramework.systemInformation.family === "tablet")
-
+    property bool showSummary:true//app.info.propertyValue("showSummary",true)
 
 
     //custom font if any
@@ -164,10 +197,23 @@ App {
     property color headerBackgroundColor: /*app.isDarkMode? "#6e6e6e":*/app.info.propertyValue("headerBackgroundColor","#00897b");
     property color headerTextColor: app.isDarkMode? "white": app.info.propertyValue("headerTextColor","white");
     property color pageBackgroundColor: app.isDarkMode? "#404040":app.info.propertyValue("pageBackgroundColor","#EBEBEB");
-    property color buttonColor: /*isDarkMode? "#969696":*/ app.info.propertyValue("buttonColor","orange");
+    property color buttonColor: /*isDarkMode? "#969696":*/ app.info.propertyValue("buttonColor","red");
     property color textColor: app.isDarkMode? "white": app.info.propertyValue("textColor","white");
     property color titleColor: app.isDarkMode? "white": app.info.propertyValue("titleColor","white");
     property color subtitleColor: app.isDarkMode? "white": app.info.propertyValue("subtitleColor","#4C4C4C");
+    property color headerHighlightTextColor: app.isDarkMode? "white": "#0000FF";
+
+    //report types
+    property var disasterTypeId: []
+    property var disasterTypeIdString: app.info.propertyValue("disasterTypeId","")
+
+    //report types
+    property var reportTypeId: []
+    property var reportTypeIdString: app.info.propertyValue("reportTypeId","")
+
+    //damage types
+    property var damageTypeId: []
+    property var damageTypeIdString: app.info.propertyValue("damageTypeId","")
 
     //layers
     property string featureServiceURL: app.info.propertyValue("featureServiceURL","")
@@ -204,11 +250,16 @@ App {
     property string saveDataModeDes: qsTr("Enable this setting to display a warning message when using cellular data to download the Mobile Map Package, or submitting a report with a total attachment size greater than 10 MB.")
     property string allowMessage: qsTr("Allow uploads or downloads using cellular data")
     property string summary:qsTr("Summary")
-    property string report:qsTr("Report")
-    property string type:qsTr("Type")
+    // property string report:qsTr("Disaster")
+    property string type:qsTr("Disaster Type")
+    property string reportType:qsTr("Report Type")
+    property string damageType:qsTr("Damage Type")
     property string location:qsTr("Location")
     property string media:qsTr("Media")
     property string details:qsTr("Details")
+
+    property string reportTypeString: ""
+    property string damageTypeString: ""
 
     readonly property color black_87: app.isDarkMode ? app.textColor:"#DE000000"
     readonly property color white_100: "#FFFFFFFF"
@@ -234,6 +285,13 @@ App {
                                           });
 
     readonly property string kDefaultContentType: "application/octet-stream"
+    property var favoriteEntries:({})
+    property string  featureLayerBeingEdited:""
+    property var activeLayerIcon:({})
+    property var locationDisplayText:""
+    property bool hasAllRequired: false
+
+    signal attributesChanged()
 
 
     // property checks
@@ -373,7 +431,7 @@ App {
     property string askToSaveMsg: qsTr("Please save as draft and submit later.")
     property string savedSuccessMessage: qsTr("Saved as draft.")
     property string resetTitle: qsTr("Do you wish to continue?")
-    property string resetMessage: qsTr("This will erase all saved drafts, offline map and custom app settings from this device.")
+    property string resetMessage: qsTr("This will erase all saved drafts, saved entries in clipboard, offline map, and custom app settings from this device.")
     property string logoutTitle: qsTr("Are you sure you want to sign out?")
     property string logoutMessage: qsTr("")
     property string titleForSubmitInDraft: qsTr("Do you want to continue?")
@@ -396,17 +454,19 @@ App {
     readonly property string locationAccessDisabledTitle: qsTr("Location access disabled")
     readonly property string locationAccessDisabledMessage: qsTr("Please enable Location access permission for %1 in the device Settings.").arg(app.info.title)
     readonly property string ok_String: qsTr("OK")
-    readonly property string storageAccessDisabledTitle: qsTr("Storage access disabled")
-    readonly property string storageAccessDisabledMessage: qsTr("Please enable Storage access permission for %1 in the device Settings.").arg(app.info.title)
+
+    // Dialog buttons
+    readonly property string today_string: qsTr("TODAY")
+    readonly property string cancel_string: qsTr("CANCEL")
 
     // Copy and paste
-    readonly property string save_entries: qsTr("Save entries")
-    readonly property string entries_saved: qsTr("Entries saved")
-    readonly property string paste_entries: qsTr("Paste entries")
-    readonly property string clear_entries: qsTr("Clear entries")
-    readonly property string clear_toast: qsTr("Are you sure you want to clear saved entries?")
+    readonly property string save_entries: qsTr("Save to clipboard")
+    readonly property string entries_saved: qsTr("Entries saved to clipboard.")
+    readonly property string paste_entries: qsTr("Paste from clipboard")
+    readonly property string clear_entries: qsTr("Clear clipboard")
+    readonly property string clear_toast: qsTr("Are you sure you want to clear saved entries from clipboard?")
 
-
+    readonly property string delete_app: qsTr("Delete")
     property bool skipPressed: false
     property string captureType: "point"
     property Polyline polylineObj
@@ -429,6 +489,7 @@ App {
     property int maximumAttachments: app.info.propertyValue("maximumAttachments", 6)
     property alias savedReportsModel: savedReportsListModel
     property alias submitStatusModel: submitStatusModel
+    property var summaryModel:[]
 
     property var localdb
 
@@ -453,9 +514,16 @@ App {
 
     readonly property color accentColor: Qt.lighter(app.primaryColor)
     readonly property real baseUnit: app.units(8)
+    readonly property real defaultMargin:2 * app.baseUnit
     readonly property real headerHeight: 7 * app.baseUnit
     property var sentAttachmentCount1
     property var submittedAttachments: []
+
+    property var itemId:app.info.itemId ?app.info.itemId:app.folder.folderName
+    property string dbfolderPath:"~/ArcGIS/AppStudio/"+ itemId + "/Data/Sql/quickreport.sqlite"
+    property string attachmentsBasePath:"~/ArcGIS/AppStudio/"+ itemId + "/Data/Attachments/"
+    property FileFolder attachmentsFolder:(AppFramework.fileInfo(attachmentsBasePath)).folder
+     property ListModel themes: ListModel{}
 
     focus: true
 
@@ -488,42 +556,38 @@ App {
     }
 
     FileFolder{
+        id: mypicturesFolder
+        path: "~/ArcGIS/AppStudio/"+ itemId + "/Data/Pictures"
+        Component.onCompleted: {
+            makeFolder();
+        }
+    }
+
+    FileFolder{
         id: videoFolder
 
-        path: "~/ArcGIS/QuickReport/Video"
-
-        Component.onCompleted: {
-            makeFolder();
-        }
-    }
-    FileFolder{
-        id: attachmentsFolder
-
-        path: "~/ArcGIS/QuickReport/Attachments"
+        path: "~/ArcGIS/AppStudio/"+ itemId + "/Data/Video"
 
         Component.onCompleted: {
             makeFolder();
         }
     }
 
-
-
-    FileFolder {
-        id: fileFolder
-        path: "~/ArcGIS/QuickReport/Sql"
-    }
 
     SqlDatabase {
         id: db
-        databaseName: fileFolder.filePath("quickreport1.sqlite")
 
-        Component.onCompleted: {
-            console.log("makeFolder", fileFolder.makeFolder())
-            console.log("makePath", fileFolder.makePath(fileFolder.path))
+       property FileInfo dbfileInfo: AppFramework.fileInfo(dbfolderPath)
+       databaseName: dbfileInfo.filePath
+
+        Component.onCompleted: {            
+            console.log("makeFolder", dbfileInfo.folder.makeFolder())
+           // console.log("makePath", dbFolder.makePath(dbFolder.path))
             console.log("2", db.open());
-            console.log("INITIALIZED", fileFolder.path)
+            console.log("INITIALIZED", dbfileInfo.folder.path)
             initDBTables()
             importDataIntoSqlFromLocalStorage()
+            loadFavorites()
             if (Qt.platform.os === "ios")
                 updateAttachmentPathForiOS()
 
@@ -531,6 +595,7 @@ App {
             updateSavedReportsCount();
         }
     }
+
 
     function randomColor (colortype) {
         var types = {
@@ -549,16 +614,19 @@ App {
     }
 
     function initDBTables(){
-        db.query("CREATE TABLE IF NOT EXISTS DRAFTS(id INT, pickListIndex INT, size INT, nameofitem TEXT, editsjson TEXT, attributes TEXT, date TEXT, attachements TEXT, featureLayerURL TEXT)");
+        // add firstName TEXT, lastName TEXT, gender INT, age INT, bloodType TEXT, tel TEXT, email TEXT to attributes
+        // add disasterType TEXT, reportType TEXT, damageType TEXT, resourceType TEXT to query below
+        db.query("CREATE TABLE IF NOT EXISTS DRAFTS(id INT, pickListIndex INT, size INT, nameofitem TEXT, editsjson TEXT, attributes TEXT, date TEXT, attachements TEXT, featureLayerURL TEXT, disasterType TEXT, reportType TEXT, damageType TEXT, resourceType TEXT)");
+        db.query("CREATE TABLE IF NOT EXISTS FAVORITES(featureServiceURL TEXT,layerName INT, category TEXT,  editsjson TEXT)");
     }
     function importDataIntoSqlFromLocalStorage()
     {
         //get the data from local storage
-        var dbname = app.info.itemId;
+        var dbname = itemId;
         if(dbname)
         {
             localdb = LocalStorage.openDatabaseSync(dbname, "1.0", "Unsent Reports", 1000000);
-
+            console.log("localdb", localdb)
             try{
                 importData();
             }
@@ -571,11 +639,72 @@ App {
 
     }
 
+    function saveFavorites(favoriteObj)
+    {
+        clearFavorites()
+        db.query("BEGIN TRANSACTION");
+        var insert_query = db.query();
+        insert_query.prepare("INSERT INTO FAVORITES(featureServiceUrl,layerName, category, editsJson)  VALUES(:featureServiceUrl,:layerName, :category, :editsJson);")
+        insert_query.executePrepared({featureServiceUrl:app.featureServiceURL,layerName:favoriteObj.layerName, category:favoriteObj.category, editsJson:favoriteObj.editsJson});
+        insert_query.finish();
+        db.query("END TRANSACTION")
+    }
+    function clearAllFavorites()
+    {
+        db.query("BEGIN TRANSACTION");
+        var delete_query1 = db.query();
+        delete_query1.prepare("DELETE FROM FAVORITES;")
+        delete_query1.executePrepared();
+        delete_query1.finish();
+
+        db.query("END TRANSACTION")
+    }
+
+    function clearFavorites()
+    {
+        db.query("BEGIN TRANSACTION");
+        var delete_query1 = db.query();
+        delete_query1.prepare("DELETE FROM FAVORITES where featureServiceUrl= :featureServiceURL and layerName = :featureLayerUrl")
+        delete_query1.executePrepared({featureServiceURL:app.featureServiceURL,featureLayerUrl:app.featureLayerBeingEdited});
+
+
+
+
+        delete_query1.finish();
+
+        db.query("END TRANSACTION")
+
+    }
+
+    function loadFavorites()
+    {
+        db.query("BEGIN TRANSACTION");
+
+        var select_query = db.query("SELECT * FROM FAVORITES where featureServiceUrl=:featureServiceURL",{featureServiceURL:app.featureServiceURL});
+
+
+        for(var ok = select_query.first(); ok; ok = select_query.next()) {
+            var rs = select_query.values;
+
+            var layerName = rs.layerName;
+            var category = rs.category;
+            var editsjson = rs.editsjson;
+            var categoryObj = {}
+            categoryObj[category] = editsjson
+            favoriteEntries[layerName] = categoryObj
+
+
+        }
+
+        db.query("END TRANSACTION")
+
+    }
+
     function importData()
     {  db.query("BEGIN TRANSACTION");
         localdb.transaction(function(tx){
             var rs = tx.executeSql('SELECT * FROM DRAFTS');
-
+            console.log("break 1");
             for(var i = 0; i < rs.rows.length; i++) {
                 var attributes = rs.rows.item(i).attributes;
                 var id = rs.rows[i].id;
@@ -586,10 +715,19 @@ App {
                 var date = rs.rows[i].date;
                 var attachments = rs.rows[i].attachements;
                 var featureLayerURL = rs.rows[i].featureLayerURL;
+
+                console.log("break 2");
+                // add var disasterType TEXT, reportType TEXT, damageType TEXT, resourceType TEXT
+                var disasterType = rs.rows[i].disasterType;
+                var reportType = rs.rows[i].reportType;
+                var damageType = rs.rows[i].damageType;
+                var resourceType = rs.rows[i].resourceType;
+                console.log("break 3");
+
                 //insert in SQLDatabase
                 var insert_query = db.query();
-                insert_query.prepare("INSERT INTO DRAFTS(id, pickListIndex, size, nameofitem, editsjson, attributes, date, attachements, featureLayerURL)  VALUES(:id, :pickListIndex, :size, :nameofitem, :editsjson, :attributes, :date, :attachements, :featureLayerURL);")
-                insert_query.executePrepared({id:id, pickListIndex:pickListIndex, size:size, nameofitem:nameofitem, editsjson:editsjson, attributes:attributes, date:date, attachements:attachments, featureLayerURL:featureLayerURL});
+                insert_query.prepare("INSERT INTO DRAFTS(id, pickListIndex, size, nameofitem, editsjson, attributes, date, attachements, featureLayerURL, disasterType, reportType, damageType, resourceType)  VALUES(:id, :pickListIndex, :size, :nameofitem, :editsjson, :attributes, :date, :attachements, :featureLayerURL, :reportType, :damageType, :resourceType);")
+                insert_query.executePrepared({id:id, pickListIndex:pickListIndex, size:size, nameofitem:nameofitem, editsjson:editsjson, attributes:attributes, date:date, attachements:attachments, featureLayerURL:featureLayerURL, disasterType:disasterType, reportType:reportType, damageType:damageType, resourceType:resourceType});
                 insert_query.finish();
                 // now delete the imported record from LocalStorage
                 tx.executeSql('DELETE FROM DRAFTS WHERE id = ?', id)
@@ -700,10 +838,42 @@ App {
         }
         dbQuery.finish();
     }
-
+    function populateThemes(){
+        themes.append({theme:app.automatic})
+        themes.append({theme:app.light})
+        themes.append({theme:app.dark})
+    }
 
     Component.onCompleted: {
+        populateThemes()
+        if(!attachmentsFolder.exists)
+            attachmentsFolder.makeFolder()
+
         isHapticFeedbackSupported = HapticFeedback.supported
+
+        // add disaster types
+        if(typeof disasterTypeIdString === "string") {
+            if(disasterTypeIdString.trim() > "") disasterTypeId = disasterTypeIdString.split(",").map(Number);
+            else disasterTypeId = [];
+        } else if(typeof disasterTypeIdString === "number") {
+            disasterTypeId = [disasterTypeIdString];
+        }
+
+        // add report types
+        if(typeof reportTypeIdString === "string") {
+            if(reportTypeIdString.trim() > "") reportTypeId = reportTypeIdString.split(",").map(Number);
+            else reportTypeId = [];
+        } else if(typeof reportTypeIdString === "number") {
+            reportTypeId = [reportTypeIdString];
+        }
+
+        // add damage types
+        if(typeof damageTypeIdString === "string") {
+            if(damageTypeIdString.trim() > "") damageTypeId = damageTypeIdString.split(",").map(Number);
+            else damageTypeId = [];
+        } else if(typeof damageTypeIdString === "number") {
+            damageTypeId = [damageTypeIdString];
+        }
 
         if(typeof featureLayerIdString === "string") {
             if(featureLayerIdString.trim() > "")featureLayerId = featureLayerIdString.split(",").map(Number);
@@ -717,13 +887,8 @@ App {
             if(isNotchAvailable())
                 app.isIPhoneX = true;
         }
-
-
-        if(Permission.checkPermission(Permission.PermissionTypeStorage) && Qt.platform.os === "android"){
-            storageAccessDialog.visible = true;
-        }
-
-        copyLocalFile();
+//        if(app.helpPageUrl && !validURL(app.helpPageUrl))
+//        copyLocalFile();
 
         app.token = app.settings.value("token", "");
         app.expiration = app.settings.value("expiration", "");
@@ -747,16 +912,22 @@ App {
     }
 
     function copyLocalFile(){
-        var path = AppFramework.userHomeFolder.filePath("~/ArcGIS/AppStudio/Data");
-        var arr = helpPageUrl.split("/");
-        AppFramework.userHomeFolder.makePath(path);
+        var path = AppFramework.userHomeFolder.filePath("ArcGIS/AppStudio/Data");
+        var arr = helpPageUrl.split("/");        
+        var newPath = path
         var resourceFolderName = arr[0];
         var resourceFileName = arr[1];
+        if(resourceFolderName.length > 1)
+        newPath = path + "/" + resourceFolderName
+        AppFramework.userHomeFolder.makePath(newPath);
         var resourceFolder = AppFramework.fileFolder(app.folder.folder(resourceFolderName).path);
-        var outputFolder = AppFramework.fileFolder(path);
-        var outputLocation = path + "/" + resourceFileName;
+        var outputFolder = AppFramework.fileFolder(newPath);
+        if(resourceFileName !== undefined)
+        {
+        var outputLocation = newPath + "/" + resourceFileName;
         outputFolder.removeFile(resourceFileName);
         resourceFolder.copyFile(resourceFileName, outputLocation);
+        }
     }
 
     function rot13(s) {
@@ -770,7 +941,7 @@ App {
     Connections {
         target: AppFramework.network
         onIsOnlineChanged: {
-            isOnline = AppFramework.network.isOnline
+            isOnline = Networking.isOnline
         }
     }
 
@@ -824,7 +995,7 @@ App {
                 attributesToEdit[field] = attributesArray[field];
             }
         }
-
+        // TO-DO
         if(theFeatureTypesModel.count>0) attributesToEdit[app.typeIdField] =  theFeatureTypesModel.get(pickListIndex).value;
 
         attributesToEdit["GlobalID"] = featureUid
@@ -845,28 +1016,28 @@ App {
 
         featureServiceManager.applyEditsUsingAttachmentFirst(featureToSubmit, function(objectId,errorCode){
 
-           // console.log("success")
+            // console.log("success")
             if(errorCode === 0)
             {
-            mailpayload.reportInfo.objectId = objectId
-            app.theFeatureEditingAllDone = true
-            app.theFeatureEditingSuccess = true
-            submitStatusModel.append({"type":"feature","loadStatus":"success","objectid":objectId,"fileName":""})
-            removeAttachments(attachments)
+                mailpayload.reportInfo.objectId = objectId
+                app.theFeatureEditingAllDone = true
+                app.theFeatureEditingSuccess = true
+                submitStatusModel.append({"type":"feature","loadStatus":"success","objectid":objectId,"fileName":""})
+                removeAttachments(attachments)
 
-            if(app.theFeatureEditingSuccess === true && app.isFromSaved){
-                var delete_query = db.query();
-                delete_query.prepare("DELETE FROM DRAFTS WHERE id =:id;")
-                db.query("BEGIN TRANSACTION");
-                delete_query.executePrepared({id: app.currentEditedSavedIndex});
-                delete_query.finish();
-                db.query("END TRANSACTION");
+                if(app.theFeatureEditingSuccess === true && app.isFromSaved){
+                    var delete_query = db.query();
+                    delete_query.prepare("DELETE FROM DRAFTS WHERE id =:id;")
+                    db.query("BEGIN TRANSACTION");
+                    delete_query.executePrepared({id: app.currentEditedSavedIndex});
+                    delete_query.finish();
+                    db.query("END TRANSACTION");
 
-            }
-            if(app.payloadUrl)
-                featureServiceManager.sendEmail(mailpayload)
-            app.theFeatureEditingAllDone = true;
-            app.theFeatureEditingSuccess = true;
+                }
+                if(app.payloadUrl)
+                    featureServiceManager.sendEmail(mailpayload)
+                app.theFeatureEditingAllDone = true;
+                app.theFeatureEditingSuccess = true;
             }
             else
                 submitStatusModel.append({"type":"feature","loadStatus":"failed","objectid":objectId,"fileName":""})
@@ -1048,7 +1219,7 @@ App {
                 attributesToEdit[field] = attributesArray[field];
             }
         }
-
+        // TO-DO
         if(theFeatureTypesModel.count>0) attributesToEdit[app.typeIdField] =  theFeatureTypesModel.get(pickListIndex).value;
 
         var finalJSONEdits = [{"attributes": attributesToEdit, "geometry":geometryForFeatureToEdit.json}]
@@ -1216,6 +1387,301 @@ App {
             submitReportUsingFeatureFirst()
     }
 
+    function populateSummaryTitle()
+    {
+        var reportTitleSection = null
+        if(app.featureLayerBeingEdited !== "default")
+        {
+            reportTitleSection = {}
+            reportTitleSection["content"] = []
+            var contentItem = {}
+            var title = app.featureLayerBeingEdited    // point layer
+            contentItem["icon"] = app.activeLayerIcon  // point icon
+            contentItem["title"] = title               // point layer as title
+            contentItem["isDotIconVisible"] = false
+            contentItem["hasIcon"] = true
+
+            reportTitleSection["heading"] = app.report // = "Disaster"
+            reportTitleSection["content"].push(contentItem)
+        }
+
+        return reportTitleSection
+    }
+
+    function populateSummaryType()
+    {
+        var disasterTypeSection = null
+        if(pickListIndex > -1) // TO-DO
+        {
+            disasterTypeSection = {}
+            disasterTypeSection["content"] = []
+            var contentItem = {}
+            var disasterType = theFeatureTypesModel.count>0?theFeatureTypesModel.get(pickListIndex).label:""
+            contentItem["title"] = disasterType
+            contentItem["isDotIconVisible"] = false
+            contentItem["hasIcon"] = false
+
+            disasterTypeSection["heading"] = app.type
+            disasterTypeSection["content"].push(contentItem)
+        }
+        return disasterTypeSection
+    }
+
+    function populateSummaryReportType()
+    {
+        var reportTypeSection = null
+        reportTypeSection = {}
+        reportTypeSection["content"] = []
+        var contentItem = {}
+        // var reportType = reportListModel.get(0).reportType //TO-DO
+
+        contentItem["title"] = app.reportTypeString
+        contentItem["isDotIconVisible"] = false
+        contentItem["hasIcon"] = false
+
+        reportTypeSection["heading"] = app.reportType
+        reportTypeSection["content"].push(contentItem)
+
+        return reportTypeSection
+    }
+
+    function populateSummaryDamageType()
+    {
+        var damageTypeSection = null
+        damageTypeSection = {}
+        damageTypeSection["content"] = []
+        var contentItem = {}
+        //var damageTypeId = app.damageTypeId //TO-DO
+
+        contentItem["title"] = app.damageTypeString
+        contentItem["isDotIconVisible"] = false
+        contentItem["hasIcon"] = false
+
+        damageTypeSection["heading"] = app.damageType
+        damageTypeSection["content"].push(contentItem)
+
+        return damageTypeSection
+    }
+
+    function populateSummaryLocation()
+    {
+        var reportLocationSection = {}
+        reportLocationSection["content"] = []
+        var contentItem = {}
+        var geometryType = ""
+        var geometryDesc = ""
+
+        var geometryForFeatureToEdit;
+
+        geometryDesc = app.locationDisplayText
+        if(captureType === "point")
+        {
+            geometryType = "Point"
+            geometryForFeatureToEdit = app.theNewPoint;
+            var latitude = geometryForFeatureToEdit.y
+            var longitude = geometryForFeatureToEdit.x
+            // geometryDesc = `Lat: ${latitude} Long:${longitude}`
+        }
+        else if(captureType === "line")
+        {
+            geometryType = "Polyline"
+            geometryForFeatureToEdit = app.polylineObj;
+            var length = GeometryEngine.length(geometryForFeatureToEdit)
+            //geometryDesc = length
+
+        }
+        else
+        {
+            geometryType = "Polygon"
+            geometryForFeatureToEdit = app.polygonObj;
+            var area = GeometryEngine.area(geometryForFeatureToEdit)
+            //geometryDesc = area
+        }
+        contentItem["title"] = geometryType
+        contentItem["description"] = geometryDesc
+        contentItem["hasIcon"] = false
+        contentItem["isDotIconVisible"] = true
+        reportLocationSection["heading"] = app.location
+        reportLocationSection["content"].push(contentItem)
+
+        return reportLocationSection
+    }
+
+    function populateSummaryMedia()
+    {
+        var reportMediaSection = {}
+        reportMediaSection["content"] = []
+        reportMediaSection["heading"] = app.media
+        for(var i=0;i<app.appModel.count;i++){
+            var path = app.appModel.get(i).path;
+            var modPath
+            var fileSize = 0
+            var fileInfo
+            if(path.includes("file:"))
+            {
+                if(Qt.platform.os === "windows")
+                {
+                    var tempPath
+                    if(path.includes("file:///")){
+                        tempPath = path.split("file:///")[1]
+                    }
+                    else
+                        tempPath = path.split("file://")[1]
+
+                    modPath = tempPath.replace(":/","://")
+                }
+                else
+                    modPath = path.split("file://")[1]
+
+                fileInfo = AppFramework.fileInfo(modPath);
+            }
+            else
+                fileInfo = AppFramework.fileInfo(path);
+
+            var fileName = fileInfo.fileName
+            //var fileInfo_attachment = AppFramework.fileInfo(modPath)
+
+            if(fileInfo.size < 1024)
+                fileSize = `${fileInfo.size} Bytes`
+            else
+                fileSize = app.fileSizeConverter(fileInfo.size)
+            //var sizeOfAttachment = app.getFileSize(filePath)
+            var contentItem = {}
+            contentItem["title"] = fileName
+            contentItem["description"] = fileSize
+            contentItem["hasIcon"] = false
+            contentItem["isDotIconVisible"] = true
+            reportMediaSection["content"].push(contentItem)
+        }
+
+
+        if(app.appModel.count === 0)
+        {
+            var contentItem1 = {}
+            contentItem1["title"] = qsTr("No attachment added")
+            contentItem1["description"] = ""
+            contentItem1["hasIcon"] = false
+            contentItem1["isDotIconVisible"] = false
+            reportMediaSection["content"].push(contentItem1)
+        }
+
+        return reportMediaSection
+
+    }
+
+
+    function getAttributeValue(fldName)
+    {
+
+        var attributes = Object.keys(attributesArray)
+        var fldval = ""
+        for(var i=0; i<attributes.length; i++)
+        {
+            var fldItem = attributes[i]
+            if(fldItem.toLowerCase() === fldName.toLowerCase())
+            {
+                fldval = attributesArray[fldItem]
+                fldval = getCodedDomainValue(fldName,fldval)
+                break;
+            }
+
+        }
+        return fldval
+    }
+
+    function getCodedDomainValue(fieldName,fldvalue)
+    {
+        var fieldValue = fldvalue
+        for(var k=0;k<fieldsMassaged.length;k++)
+        {
+            var fld = fieldsMassaged[k]
+            if(fld.name === fieldName)
+            {
+
+                var domain = fld.domain
+                if(domain)
+                {
+                    if(domain.codedValues)
+                    {
+                        var codedValues = domain.codedValues
+                        var fldnameArray = codedValues.filter(obj => obj.code === fldvalue)
+                        if(fldnameArray.length > 0)
+                        {
+                            var fldDomainValue = fldnameArray[0].name
+                            fieldValue = fldDomainValue
+                        }
+
+                    }
+
+
+                }
+                break
+            }
+        }
+        return fieldValue
+    }
+
+    function populateSummaryDetails()
+    {
+        var reportDetailSection = {}
+        reportDetailSection["content"] = []
+        reportDetailSection["heading"] = app.details // = "Details"
+
+        for(var i=0; i<fieldsMassaged.length; i++) {//featureAttributesModel
+            var item = fieldsMassaged[i];
+            var fieldName = item["alias"]
+            var fldName = item["name"]
+            var fieldVal = getAttributeValue(fldName)
+            //var fieldVal = attributesArray[fldName.toLowerCase()]
+            var fieldType = item["type"]
+            if(fieldType === "esriFieldTypeDate")
+            {
+                fieldVal =  new Date (fieldVal).toLocaleString(Qt.locale(), Qt.DefaultLocaleShortDate)
+            }
+
+            var contentItem = {}
+            contentItem["title"] = fieldName
+            contentItem["description"] = fieldVal
+            contentItem["isDotIconVisible"] = false
+            contentItem["hasIcon"] = false
+            reportDetailSection["content"].push(contentItem)
+
+        }
+        return reportDetailSection
+    }
+
+
+    function populateSummaryObject() // TO-DO
+    {
+        var summaryObject = []
+//        var titleObject =  populateSummaryTitle() // point / line / polygon
+//        if(titleObject)
+//            summaryObject.push(titleObject)
+        var typeObject = populateSummaryType() // what type of disaster
+        if(typeObject)
+            summaryObject.push(typeObject)
+
+        var reportTypeObject = populateSummaryReportType() // what type of report
+        if(reportTypeObject)
+            summaryObject.push(reportTypeObject)
+
+        var damageTypeObject = populateSummaryDamageType() // what type of report
+        if(damageTypeObject)
+            summaryObject.push(damageTypeObject)
+
+        var locationObject = populateSummaryLocation()
+        summaryObject.push(locationObject)
+        if(app.hasAttachment)
+        {
+        var mediaObject = populateSummaryMedia()
+        summaryObject.push(mediaObject)
+        }
+        var detailsObject = populateSummaryDetails() // details!!
+        summaryObject.push(detailsObject)
+        summaryModel = summaryObject
+
+    }
+
 
     FileInfo{
         id: fileInfo
@@ -1271,8 +1737,10 @@ App {
             }
         }
 
+        // TO-DO: DELETE THE pickListIndex
+        //if(theFeatureTypesModel.count>0) attributesToEdit[app.typeIdField] =  theFeatureTypesModel.get(0).value;
         if(theFeatureTypesModel.count>0) attributesToEdit[app.typeIdField] =  theFeatureTypesModel.get(pickListIndex).value;
-        var finalJSONEdits = [{"attributes": attributesToEdit, "geometry": geometryForFeatureToEdit.json}]
+        var finalJSONEdits = [{"attributes": attributesToEdit, "geometry":geometryForFeatureToEdit? geometryForFeatureToEdit.json:null,"featureLayerName":app.featureLayerBeingEdited,"geometryDescription":app.locationDisplayText}]
         console.log("JSON for save feature json", JSON.stringify(finalJSONEdits))
 
         var currentDate = new Date();
@@ -1293,18 +1761,19 @@ App {
         var count = 0;
 
         var select_query1 = db.query("SELECT MAX(CAST(SUBSTR(nameofitem,6) AS INT)) as maxdraft FROM DRAFTS")
-                if(theFeatureTypesModel.count === 0)
-                {
-                    for(var name = select_query1.first(); name; name = select_query1.next()) {
-                        var rs_name = select_query1.values;
-                        var itemname =rs_name["maxdraft"]
-                        count = itemname + 1
+        if(theFeatureTypesModel.count === 0)
+        {
+            for(var name = select_query1.first(); name; name = select_query1.next()) {
+                var rs_name = select_query1.values;
+                var itemname =rs_name["maxdraft"]
+                count = itemname + 1
 
 
-                    }
-                }
+            }
+        }
 
-
+        //TO-DO
+        //var nameofitem = theFeatureTypesModel.count>0 ? theFeatureTypesModel.get(0).label : (app.isFromSaved? "Draft "+(savedNameofitem+1): "Draft "+count);
         var nameofitem = theFeatureTypesModel.count>0 ? theFeatureTypesModel.get(pickListIndex).label : (app.isFromSaved? "Draft "+(savedNameofitem+1): "Draft "+count);
         var xmax = app.centerExtent? app.centerExtent.xMax : null;
         var xmin = app.centerExtent? app.centerExtent.xMin : null;
@@ -1322,10 +1791,17 @@ App {
         attributesArray["isReadyForSubmit"] = app.isReadyForSubmit;
         attributesArray["index"] = app.isFromSaved?savedNameofitem:(theFeatureTypesModel.count>0? -1:count-1);
 
-        var insert_query = db.query();
-        insert_query.prepare("INSERT INTO DRAFTS(id, pickListIndex, size, nameofitem, editsjson, attributes, date, attachements, featureLayerURL)  VALUES(:id, :pickListIndex, :size, :nameofitem, :editsjson, :attributes, :date, :attachements, :featureLayerURL);")
+        // assign values
+        var disasterType = theFeatureTypesModel.count>0 ? theFeatureTypesModel.get(pickListIndex).label : "";
+        var reportType = app.reportTypeString;
+        var damageType = app.damageTypeString;
+        var resourceType = ""; // TO-DO: later, now for damage report
 
-        insert_query.executePrepared({id:id, pickListIndex:pickListIndex, size:size, nameofitem:nameofitem, editsjson:JSON.stringify(finalJSONEdits), attributes:JSON.stringify(attributesArray), date:dateString, attachements:JSON.stringify(filePaths), featureLayerURL:featureLayerURL.toString()});
+        var insert_query = db.query();
+        // ADD attributes
+        insert_query.prepare("INSERT INTO DRAFTS(id, pickListIndex, size, nameofitem, editsjson, attributes, date, attachements, featureLayerURL, disasterType, reportType, damageType, resourceType)  VALUES(:id, :pickListIndex, :size, :nameofitem, :editsjson, :attributes, :date, :attachements, :featureLayerURL, :disasterType, :reportType, :damageType, :resourceType);")
+
+        insert_query.executePrepared({id:id, pickListIndex:pickListIndex, size:size, nameofitem:nameofitem, editsjson:JSON.stringify(finalJSONEdits), attributes:JSON.stringify(attributesArray), date:dateString, attachements:JSON.stringify(filePaths), featureLayerURL:featureLayerURL.toString(),  disasterType:disasterType, reportType:reportType, damageType:damageType, resourceType:resourceType});
 
         db.query("END TRANSACTION")
 
@@ -1353,6 +1829,7 @@ App {
 
 
     function initializeFeatureService(errorcode, errormessage, root, cacheName){
+
         if(errorcode===0){
             var typeCheck = root.type;
 
@@ -1388,6 +1865,7 @@ App {
                     if(root.hasOwnProperty("templates") && root.templates.length > 0 && root.templates[0].hasOwnProperty("prototype")) app.templatesAttributes = root.templates[0].prototype.attributes;
 
                     var params = root.extent.spatialReference;
+
                     if ( root.typeIdField > ""){
                         hasSubtypes = true;
                         featureTypes = root.types;
@@ -1488,13 +1966,42 @@ App {
 
                     if(app.isFromSaved) {
                         checkReadyForSubmitReport();
+                        steps++
+                        if(app.showSummary)
+                        {
+                            if(datas.length === 0)
+                            {
+                                syms.forEach(function(e, index){
+
+                                    theFeatureTypesModel.append({"label": e.label, "value" : e.value.toString(), "description": e.description});
+
+                                })
+                            }
+                            steps--;
+                            populateSummaryObject()
+                            stackView.push(summaryPage)
+                        }
+                        else
+                        {
+                            if(hasSubtypes)
+                                stackView.showPickTypePage(false);
+                                //stackView.showReportGallery();
+                            else
+                                stackView.showRefineLocationPage(false);
+                        }
                     }
 
-                    if(hasSubtypes)
-                        stackView.showPickTypePage(false);
                     else
-                        stackView.showRefineLocationPage(false);
-                } else {
+                    {
+                        if(hasSubtypes)
+                            stackView.showPickTypePage(false);
+                            //stackView.showReportGallery();
+                        else
+                            stackView.showRefineLocationPage(false);
+                    }
+                }
+
+                else {
                     initializationCompleted = true;
                     featureServiceManager.clearCache(cacheName)
                     alertBox.text = qsTr("Unable to initialize - Insufficient capability.");
@@ -1508,7 +2015,8 @@ App {
                 alertBox.informativeText = qsTr("Please make sure you have configured a valid ArcGIS feature service url.");
                 alertBox.visible = true;
             }
-        } else {
+        }
+         else {
             initializationCompleted = true;
             if(errorcode===3){
                 alertBox.text = qsTr("Unable to initialize - Network not available.")
@@ -1529,6 +2037,7 @@ App {
                 alertBox.visible = true;
             }
         }
+
     }
 
     FeatureServiceManager{
@@ -1555,7 +2064,9 @@ App {
     ListModel{
         id: savedReportsListModel
     }
-
+    ListModel{
+        id: savedReportsModel
+    }
     property var savedReportsSectionModel: []
 
     //--------------------------------
@@ -1575,8 +2086,13 @@ App {
             updateSavedReportsCount()
         }
 
-        function showReportGallery() {
+        function showDisasterType() {
+            //steps++;
+            push(disasterTypePage);
+        }
 
+        function showReportGallery() {
+            //steps++;
             push(reportGalleryPage);
         }
 
@@ -1600,9 +2116,12 @@ App {
         }
 
         function showRefineLocationPage(flag){
-
             steps++;
             push(refineLocationPage)
+        }
+
+        function showQueryLocationPage(){
+            push(queryLocationPage)
         }
 
         function showAddDetailsPage(){
@@ -1622,10 +2141,14 @@ App {
             steps++;
             stackView.push(pickTypePage)
         }
+
+        function showDamageTypePage(){
+            //steps++;
+            push(damageTypePage)
+        }
     }
 
     //--------------------------------
-
     function clearData(){
         captureType = "point";
         polylineObj = null;
@@ -1688,7 +2211,13 @@ App {
 
     function initSavedReportsPage(){
         initSavedReportsData(-1)
+        // changes on 2021-12-09;
         stackView.push(savedReportsPage);
+    }
+
+    function initSubmittedReportsPage(){
+        // changes on 2021-12-11;
+        stackView.push(queryLocationPage);
     }
 
     function initSavedReportsData(order, refreshSection){                   //order: -1 - last recent first; 1 - last recent last
@@ -1720,8 +2249,8 @@ App {
             var ymax = JSON.parse(attributes)["_yMax"];
             var ymin = JSON.parse(attributes)["_yMin"];
             var realValue = JSON.parse(attributes)["_realValue"];
-            var hasAttachments = JSON.parse(attributes)["hasAttachment"]==null? true:JSON.parse(attributes)["hasAttachment"];
-            var isReady = JSON.parse(attributes)["isReadyForSubmit"]==null? true:JSON.parse(attributes)["isReadyForSubmit"];
+            var hasAttachments = JSON.parse(attributes)["hasAttachment"]===null? true:JSON.parse(attributes)["hasAttachment"];
+            var isReady = JSON.parse(attributes)["isReadyForSubmit"]===null? true:JSON.parse(attributes)["isReadyForSubmit"];
 
             if(refreshSection) {
                 if(typeof savedReportsSectionModel[featureLayerURL] !== "undefined" && savedReportsSectionModel[featureLayerURL] !== null) {
@@ -1755,8 +2284,35 @@ App {
             }
             )
 
+            // changes on 2021-12-10
+            var geometryDescription = JSON.parse(editsJson)[0]["geometryDescription"];
+
+            var geometryLatLon = geometryDescription.split(" ");
+            var latString = geometryLatLon[0];
+            var lonString = geometryLatLon[1];
+
+            // console.log(typeof latString, typeof lonString);
+
+            var lat = Number(latString.substring(0, latString.length - 1));
+            var lon = Number(lonString.substring(0, lonString.length - 1));
+
+            if (latString[latString.length - 1] === 'S') {
+                lat = (-1) * lat;
+            }
+            if (lonString[lonString.length - 1] === 'W') {
+                lon = (-1) * lon;
+            }
+
+            console.log(latString, " lat: ", lat, typeof lat);
+            console.log(lonString, " lon: ", lon, typeof lon);
+
+            var reportType = obj.reportType;
+            var damageType = obj.damageType;
+//            savedReportsListModel.append({id: id, attributes:attributes, pickListIndex: pickListIndex, draftFeatureLayerURL: featureLayerURL, attachements: attachements, editsJson: editsJson, name: "Report "+i, type: nameofitem, date: date, size: (size/1024/1024).toFixed(2), numberOfAttachment: an,
+//                                             xmax:xmax, xmin:xmin, ymax:ymax, ymin:ymin, realValue:realValue, hasAttachments:hasAttachments, isReady:isReady})
+
             savedReportsListModel.append({id: id, attributes:attributes, pickListIndex: pickListIndex, draftFeatureLayerURL: featureLayerURL, attachements: attachements, editsJson: editsJson, name: "Report "+i, type: nameofitem, date: date, size: (size/1024/1024).toFixed(2), numberOfAttachment: an,
-                                             xmax:xmax, xmin:xmin, ymax:ymax, ymin:ymin, realValue:realValue, hasAttachments:hasAttachments, isReady:isReady})
+                                             xmax:xmax, xmin:xmin, ymax:ymax, ymin:ymin, realValue:realValue, hasAttachments:hasAttachments, isReady:isReady, lat: lat, lon: lon, reportType: reportType, damageType: damageType})
 
             // savedReportsListModel.append({id: id, attributes:attributes, pickListIndex: pickListIndex, draftFeatureLayerURL: featureLayerURL, attachements: attachements, editsJson: editsJson, name: "Report "+i, type: nameofitem, date: date, size: (size/1024/1024).toFixed(2), numberOfAttachment: JSON.parse(attachements).length,
             //                                  xmax:xmax, xmin:xmin, ymax:ymax, ymin:ymin, realValue:realValue, hasAttachments:hasAttachments, isReady:isReady})
@@ -1825,10 +2381,13 @@ App {
         for(var i in attachments){
             try {
                 var filePath = attachments[i].filePath
+                if(filePath)
+                {
                 var attachmentFileInfo = AppFramework.fileInfo(filePath);
                 var fileName = attachmentFileInfo.fileName;
                 var fileFolder = attachmentFileInfo.folder
                 if(fileFolder.fileExists(fileName)) fileFolder.removeFile(fileName);
+                }
             } catch (e) {
                 console.log("Error: failed to remove  file." + attachments[i]);
             }
@@ -2020,6 +2579,21 @@ App {
 
     //--------------------------------------------------------------------------
     Component {
+        id: disasterTypePage
+
+        DisasterTypePage {
+            onPrevious: {
+                stackView.pop()
+            }
+
+            onNext: {
+                stackView.showReportGallery();
+            }
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    Component {
         id: reportGalleryPage
 
         ReportGalleryPage {
@@ -2028,7 +2602,22 @@ App {
             }
 
             onNext: {
+                stackView.showDamageTypePage();
+            }
+        }
+    }
 
+    //--------------------------------------------------------------------------
+    Component {
+        id: damageTypePage
+
+        DamageTypePage {
+            onPrevious: {
+                stackView.pop()
+            }
+
+            onNext: {
+                stackView.showRefineLocationPage();
             }
         }
     }
@@ -2042,22 +2631,39 @@ App {
             }
             onPrevious: {
                 stackView.pop();
-                var attachments = [];
-                for(var i=0; i<appModel.count; i++){
-                    temp = app.appModel.get(i).path;
-                    app.selectedImageFilePath = AppFramework.resolvedPath(temp);
-                    attachments.push(app.selectedImageFilePath);
-                }
-                if(!app.isFromSaved) {
-                    removeAttachments(attachments);
-                    appModel.clear();
-                } else {
-                    appModel.clear();
-                    for(var i =0; i < appModelCopy.count; i++){
-                        appModel.append(appModelCopy.get(i))
+                var stackitem = stackView.get(stackView.depth - 1)
+                if(stackitem.objectName !== "summaryPage")
+                {
+
+                    var attachments = [];
+                    for(var i=0; i<appModel.count; i++){
+                        temp = app.appModel.get(i).path;
+                        app.selectedImageFilePath = AppFramework.resolvedPath(temp);
+                        attachments.push(app.selectedImageFilePath);
+                    }
+                    if(!app.isFromSaved) {
+                        removeAttachments(attachments);
+                        appModel.clear();
+                    } else {
+                        appModel.clear();
+                        for(var i =0; i < appModelCopy.count; i++){
+                            appModel.append(appModelCopy.get(i))
+                        }
+                    }
+                    if(app.isFromSaved)
+                    {
+                        checkReadyForAttachments();
+
                     }
                 }
-                if(app.isFromSaved)checkReadyForAttachments();
+                else
+                {
+                    checkReadyForAttachments();
+                    if(!isReadyForAttachments)
+                        app.hasAllRequired = false
+                    app.populateSummaryObject()
+                }
+
             }
         }
     }
@@ -2084,11 +2690,24 @@ App {
 
     //--------------------------------------------------------------------------
     Component {
+        id: queryLocationPage
+        QueryLocationPage {
+            onPrevious: {
+                app.isReadyForGeo = storedReadyForGeo;
+                // reloadMapTimer.stop();
+                stackView.pop();
+            }
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    Component {
         id: pickTypePage
         PickTypePage {
             onNext: {
                 console.log("isReadyForSubmitReport:::", isReadyForSubmitReport);
-                stackView.showRefineLocationPage(false);
+                // stackView.showRefineLocationPage(false);
+                stackView.showReportGallery();
             }
             onPrevious: {
                 stackView.pop();
@@ -2104,14 +2723,62 @@ App {
             onNext: {
                 if(message=="submit"){
                     submitReport()
-                } else{
+                }
+                else if(message === "showSummary")
+                {
+                    populateSummaryObject()
+                    stackView.push(summaryPage)
+                }
+                else{
                     draftSaveDialog.visible = true;
                 }
             }
             onPrevious: {
                 stackView.pop();
-                attributesArray = JSON.parse(JSON.stringify(attributesArrayCopy));
-                if(app.isFromSaved)checkReadyForDetails();
+                var stackitem = stackView.get(stackView.depth - 1)
+                if(stackitem.objectName !== "summaryPage")
+                {
+                    attributesArray = JSON.parse(JSON.stringify(attributesArrayCopy));
+                    if(app.isFromSaved)checkReadyForDetails();
+                }
+            }
+        }
+    }
+
+    Component {
+        id: summaryPage
+        SummaryPage {
+
+            onShowNext: {
+                if(message === app.type)               // disaster type: storm / hurricane / landslide / flood
+                    stackView.push(pickTypePage)
+                else if (message === app.reportType)   // report type: damage / request / donation
+                    stackView.push(reportGalleryPage)
+                else if(message === app.damageType)    // damage type: casualties / buildings / roads / others
+                    stackView.push(damageTypePage)
+                //else if(message === app.resourceType)    // resource type: ...
+                    //stackView.push(ResourceTypePage)
+                else if(message === app.location)
+                    stackView.push(refineLocationPage)
+                else if (message === app.media)
+                    stackView.push(addPhotoPage)
+                else if(message === app.details)
+                    stackView.push(addDetailsPage)
+
+
+            }
+
+            onPrevious: {
+                stackView.pop();
+            }
+            onNext:{
+                if(message=="submit"){
+                    submitReport()
+                }
+                else{
+                    draftSaveDialog.visible = true;
+                }
+
             }
         }
     }
@@ -2170,6 +2837,7 @@ App {
 
     }
 
+
     function validURL(str) {
         var regex = /(http|https):\/\/(\w+:{0,1}\w*)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%!\-\/]))?/;
 
@@ -2181,14 +2849,57 @@ App {
     }
 
     Component{
-        id: webPageComponent
+           id: webPageComponent
+           WebPage {
+               id: webPage
+               headerColor: app.headerBackgroundColor
 
-        WebPage {
-            id: webPage
+               function generateFeedbackEmailLink() {
+                   var urlInfo = AppFramework.urlInfo("mailto:%1".arg(emailAddress)),
+                   deviceDetails = [
+                               "%1: %2 (%3)".arg(qsTr("Device OS")).arg(Qt.platform.os).arg(AppFramework.osVersion),
+                               "%1: %2".arg(qsTr("Device Locale")).arg(Qt.locale().name),
+                               "%1: %2".arg(qsTr("App Version")).arg(app.info.version),
+                               "%1: %2".arg(qsTr("AppStudio Version")).arg(AppFramework.version),
+                           ];
+                   urlInfo.queryParameters = {
+                       "subject": "%1 %2".arg(qsTr("Feedback for")).arg(app.info.title),
+                       "body": "\n\n%1".arg(deviceDetails.join("\n"))
+                   };
+                   return urlInfo.url
+               }
 
-            headerColor: app.headerBackgroundColor
-        }
-    }
+               function openWebURL(link, title) {
+                   webPage.titleText = title
+                   webPage.transitionIn(webPage.transition.bottomUp)
+                   webPage.loadPage(link)
+               }
+
+               function openSectionID(link) {
+                   var pageURL
+                   if (validURL(helpPageUrl)) {
+                       pageURL = helpPageUrl+"#"+link
+                       webPage.transitionIn(webPage.transition.bottomUp)
+                       webPage.loadPage(pageURL)
+                   } else {
+                       webPage.transitionIn(webPage.transition.bottomUp)
+                       webPage.loadLocalHtml(link)
+                   }
+
+               }
+
+               function validURL(str) {
+                   var regex = /(http|https):\/\/(\w+:{0,1}\w*)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%!\-\/]))?/;
+                   if(!regex .test(str)) {
+                       return false;
+                   } else {
+                       return true;
+                   }
+               }
+           }
+       }
+
+
 
     ListModel {
         id: footerModel
@@ -2226,8 +2937,11 @@ App {
                     app.featureLayerURL = featureServiceURL + "/" + featureLayerId[0];
                     app.init();
                 } else {
-                    stackView.showReportGallery();
+                    // stackView.showDisasterType();
+                    stackView.showPickTypePage();
                 }
+                // stackView.showDisasterType();
+                // stackView.showPickTypePage();
             }
         }, function(errorCode, errormessage) {
             console.log(errorCode)
@@ -2251,10 +2965,6 @@ App {
             }
         })
     }
-
-
-
-
 
     ServerDialog {
         id: serverDialog
@@ -2325,6 +3035,12 @@ App {
         }
     }
 
+    ToastDialog {
+        id: toastMessage
+        // textColor: app.titleTextColor
+    }
+
+
     Component {
         id: calendarDialogComponent
         CalendarDialog{
@@ -2350,17 +3066,6 @@ App {
 
     PositionSource {
         id: permission_positionSource
-    }
-
-    ConfirmBox {
-        id: storageAccessDialog
-        text: storageAccessDisabledTitle
-        informativeText: storageAccessDisabledMessage
-        standardButtons: StandardButton.Ok
-    }
-
-    function showStorageAccessDialog() {
-        storageAccessDialog.visible = true;
     }
 
     ConfirmBox {

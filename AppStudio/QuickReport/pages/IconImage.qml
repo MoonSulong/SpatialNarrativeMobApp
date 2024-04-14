@@ -15,7 +15,7 @@ Item {
 
     Image {
         id: image
-        source:"../images/uw.png"
+        source:"../images/appstudio.png"
         anchors.fill: parent
         mipmap: true
         asynchronous: true

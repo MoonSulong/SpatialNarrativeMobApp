@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -252,8 +252,8 @@ Canvas {
                 if (Array.isArray(sketchPoints)) {
                     var extent = SketchLib.extent(sketchPoints);
 
-                    if (penWidth > 0 && extent.width >= minimumSketchSize && extent.height >= minimumSketchSize) {
-                        sketch = addPolylineSketch(sketchPoints);
+                    if (penWidth > 0 && (extent.width >= minimumSketchSize || extent.height >= minimumSketchSize)) {
+                     sketch = addPolylineSketch(sketchPoints);
                         if (textMode) {
                             textInput.show(
                                         sketch.extent.center.x,

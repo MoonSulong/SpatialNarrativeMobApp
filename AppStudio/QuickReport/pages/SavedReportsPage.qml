@@ -5,8 +5,9 @@ import QtQuick.Layouts 1.3
 
 import ArcGIS.AppFramework 1.0
 
-import Esri.ArcGISRuntime 100.2
+import Esri.ArcGISRuntime 100.10
 import ArcGIS.AppFramework.Devices 1.0
+import ArcGIS.AppFramework.Networking 1.0
 
 import "../controls"
 
@@ -88,7 +89,7 @@ Page {
 
         Label {
             id: placeHolderText
-            width: parent.width*0.6
+            width: parent.width * 0.6
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: placeHolderImage.bottom
             font.pixelSize: app.subtitleFontSize
@@ -141,49 +142,16 @@ Page {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 72 * scaleFactor
                         color: app.isDarkMode ? "#4D4D4D" : "white"
-
                         clip: true
-
                         RowLayout {
                             anchors.fill: parent
                             spacing: 0
 
                             Item {
-                                Layout.fillHeight: true
-                                Layout.preferredWidth: 16 * scaleFactor
-                            }
-
-                            Rectangle {
-                                Layout.preferredWidth: 32 * scaleFactor
-                                Layout.preferredHeight: 32 * scaleFactor
-                                radius: 16 * scaleFactor
-                                Layout.alignment: Qt.AlignVCenter
-
-                                clip: true
-
-                                color: "#EFEFEF"
-
-                                ImageOverlay {
-                                    anchors.fill: parent
-                                    anchors.margins: 4 * scaleFactor
-
-                                    source: isReady ? "../images/done_white.png" : "../images/incomplete.png"
-
-                                    overlayColor: "#595959"
-                                    showOverlay: true
-                                    fillMode: Image.PreserveAspectFit
-                                }
-                            }
-
-                            Item {
-                                Layout.fillHeight: true
-                                Layout.preferredWidth: 24 * scaleFactor
-                            }
-
-                            Item {
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: contentLayout.height
                                 Layout.alignment: Qt.AlignVCenter
+                                Layout.leftMargin: 24 * scaleFactor
 
                                 ColumnLayout {
                                     id: contentLayout
@@ -210,7 +178,39 @@ Page {
                                         font.family: app.customTextFont.name
                                     }
                                 }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        edit(index)
+                                        //
+                                    }
+                                }
                             }
+
+                            Rectangle {
+                                id:openPopup
+                                Layout.fillHeight: true
+                                Layout.preferredWidth: 32 * scaleFactor //Math.floor((parent.width - 4 * scaleFactor) / 4)
+                                color:"transparent"
+
+                                ImageOverlay{
+                                    width: 20 * scaleFactor
+                                    height: 20 * scaleFactor
+                                    anchors.centerIn: parent
+                                    source: "../images/more.png"
+                                    showOverlay: true
+                                    overlayColor: app.isDarkMode ? "white" : "#595959"
+
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        more.updateMenuItemsContent()
+                                        more.open()
+                                    }
+                                }
+                            }
+
 
                             Item {
                                 Layout.fillHeight: true
@@ -224,116 +224,48 @@ Page {
                             color: app.isDarkMode ? "#404040" : "#dddddd"
                             anchors.bottom: parent.bottom
                         }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                if(listView.currentIndex === index) listView.currentIndex = -1
-                                else listView.currentIndex = index;
-                            }
-                        }
                     }
 
-                    // delegate options
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: height
-                        height: (listView.currentIndex === index)? 48 * scaleFactor : 0
-
-                        clip: true
-
-                        color: app.isDarkMode ? "#404040" : "#dddddd"
-
-                        RowLayout {
-                            anchors.fill: parent
-
-                            spacing: 1 * scaleFactor
-
-                            Rectangle {
-                                Layout.fillHeight: true
-                                Layout.preferredWidth: Math.floor((parent.width - 2 * scaleFactor) / 3)
-
-                                color: app.isDarkMode ? "#555555" : "#EFEFEF"
-
-                                ImageOverlay{
-                                    width: 24 * scaleFactor
-                                    height: 24 * scaleFactor
-                                    anchors.centerIn: parent
-                                    source: "../images/ic_delete_forever_black_48dp.png"
-                                    showOverlay: true
-                                    overlayColor: app.isDarkMode ? "white" : "#595959"
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: {
-                                        confirmBox.visible = true;
-                                        tempIndex = index;
-                                        tempId = id;
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                Layout.fillHeight: true
-                                Layout.preferredWidth: Math.floor((parent.width - 2 * scaleFactor) / 3)
-
-                                color: app.isDarkMode ? "#555555" : "#EFEFEF"
-
-                                ImageOverlay{
-                                    width: 24 * scaleFactor
-                                    height: 24 * scaleFactor
-                                    anchors.centerIn: parent
-                                    source: "../images/ic_mode_edit_black_48dp.png"
-                                    showOverlay: true
-                                    overlayColor: app.isDarkMode ? "white" : "#595959"
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: {
-                                        edit(index)
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                Layout.fillHeight: true
-                                Layout.fillWidth: true
-
-                                color: sendMouseArea.enabled ? "#E8912E" : (app.isDarkMode ? "#555555" : "#EFEFEF")
-
-                                ImageOverlay{
-                                    width: 24 * scaleFactor
-                                    height: 24 * scaleFactor
-                                    anchors.centerIn: parent
-                                    source: "../images/ic_send_black_48dp.png"
-                                    showOverlay: true
-                                    overlayColor: sendMouseArea.enabled ? "white" : (app.isDarkMode ? "white" : "#595959")
-                                    opacity: sendMouseArea.enabled ? 1.0 : 0.2
-                                }
-
-                                MouseArea {
-                                    id: sendMouseArea
-                                    anchors.fill: parent
-                                    enabled: AppFramework.network.isOnline && isReady
-                                    onClicked: {
-                                        tempIndex = index;
-                                        tempId = id;
-                                        send(index);
-                                    }
-                                }
-                            }
-                        }
-
-                        Rectangle {
-                            width: parent.width
-                            height: 1
-                            anchors.bottom: parent.bottom
-                            color: app.isDarkMode ? "#404040" : "#dddddd"
-                        }
-                    }
                 }
+
+                //popup Menu
+                PopupMenu{
+                    id:more
+                    defaultMargin: app.defaultMargin
+                    backgroundColor: Qt.lighter(blk_000)//"#FFFFFF"
+                    highlightColor: Qt.darker(app.backgroundColor, 1.1)
+                    textColor: app.textColor
+                    primaryColor: app.primaryColor
+                    menuItems: [
+
+
+                    ]
+                    height:app.units(16)  * 2 * scaleFactor + app.units(32) * scaleFactor
+                    Material.primary: app.primaryColor
+                    Material.background: backgroundColor
+                    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+                    width:defaultContentWidth
+                    x: parent.width - width - app.baseUnit
+                    y: 0 + app.baseUnit
+
+                    onMenuItemSelected: {
+                        switch (itemLabel) {
+                        case app.delete_app:
+                            confirmBox.visible = true;
+                            tempIndex = index;
+                            tempId = id;
+                            break;
+                        }
+
+                    }
+
+                    function updateMenuItemsContent()
+                    {
+                        more.appendUniqueItemToMenuList({"itemLabel": app.delete_app})
+                    }
+
+                }
+
             }
 
             //---------------------------------------------------------------------------
@@ -526,7 +458,7 @@ Page {
                 var arr = fileName.split(".");
                 var suffix = arr[1];
                 var type = "";
-                if(suffix == "jpg" || suffix == "jpeg" || suffix == "png" || suffix == "tif" || suffix == "tiff" || suffix == "gif") type = "attachment";
+                if(suffix === "jpg" || suffix === "jpeg" || suffix === "png" || suffix === "tif" || suffix === "tiff" || suffix === "gif") type = "attachment";
 
                 else  {
                     var fileFolderName = fileInfo.folder.folderName;
@@ -534,7 +466,7 @@ Page {
                     if(fileFolderName === "Audio") type = "attachment3"
                     if(fileFolderName === "Attachments")
                     {
-                        if(suffix == "jpg" || suffix == "jpeg" || suffix == "png" || suffix == "tif" || suffix == "tiff" || suffix == "gif")
+                        if(suffix === "jpg" || suffix === "jpeg" || suffix === "png" || suffix === "tif" || suffix === "tiff" || suffix === "gif")
                             type = "attachment4";
 
                         else
@@ -604,7 +536,7 @@ Page {
         }
         else
         {
-             submitFeature(featureUid,mailpayload,attachments,finalJSONEdits)
+            submitFeature(featureUid,mailpayload,attachments,finalJSONEdits)
         }
     }
 
@@ -633,7 +565,7 @@ Page {
         {
 
             if(app.typeIdField && pickListIndex >= 0)
-            attributesToEdit[app.typeIdField] =  theFeatureTypesModel.get(pickListIndex).value;
+                attributesToEdit[app.typeIdField] =  theFeatureTypesModel.get(pickListIndex).value;
         }
 
         attributesToEdit["GlobalID"] = featureUid
@@ -778,7 +710,7 @@ Page {
                             if(res === "/")
                                 filePath = tempstring.substring(1)
                         }
-                         var sizeOfAttachment = app.getFileSize(filePath)
+                        var sizeOfAttachment = app.getFileSize(filePath)
 
 
 
@@ -836,7 +768,7 @@ Page {
                                         app.removeItemFromSavedReportPage(tempId, tempIndex, attachements);
                                     }
                                     if(app.payloadUrl)
-                                     featureServiceManager.sendEmail(mailpayload)
+                                        featureServiceManager.sendEmail(mailpayload)
 
                                 }
                             }else{
@@ -850,7 +782,7 @@ Page {
 
                                     //send email with attachment info
                                     if(app.payloadUrl)
-                                    featureServiceManager.sendEmail(mailpayload)
+                                        featureServiceManager.sendEmail(mailpayload)
 
                                 }
                             }
@@ -866,7 +798,7 @@ Page {
                     }
                     //send email
                     if(app.payloadUrl)
-                    featureServiceManager.sendEmail(mailpayload)
+                        featureServiceManager.sendEmail(mailpayload)
                 }
 
 
@@ -896,6 +828,9 @@ Page {
 
         app.pickListIndex = pickListIndex;
 
+        app.reportTypeString = app.savedReportsModel.get(index).reportType;
+        app.damageTypeString = app.savedReportsModel.get(index).damageType;
+
         for(var i=0;i<attachements.length;i++){
             var tempAttachment = attachements[i];
             var array = tempAttachment.split(".");
@@ -904,7 +839,7 @@ Page {
             var fileFolderName = fileInfo.folder.folderName;
 
 
-            if((fileFolderName !== "Attachments") && (suffix == "jpg" || suffix == "jpeg" || suffix == "png" || suffix == "tif" || suffix == "tiff" || suffix == "gif")) app.appModel.append({path: "file:///" + attachements[i], type: "attachment"});
+            if((fileFolderName !== "Attachments") && (suffix === "jpg" || suffix === "jpeg" || suffix === "png" || suffix === "tif" || suffix === "tiff" || suffix === "gif")) app.appModel.append({path: "file:///" + attachements[i], type: "attachment"});
 
             else {
 
@@ -926,14 +861,20 @@ Page {
 
         app.attributesArray = attributes;
         var editsJson = JSON.parse(app.savedReportsModel.get(index).editsJson)
+        app.featureLayerBeingEdited = editsJson[0].featureLayerName
+        app.locationDisplayText = editsJson[0].geometryDescription
 
         if(app.savedReportsModel.get(index).xmax){
             console.log(JSON.stringify(app.savedReportsModel.get(index)));
-
-            var spartialJsonForEnvelope = editsJson[0].geometry.spatialReference;
-            var wkid = spartialJsonForEnvelope.wkid;
-            var spatialReference = ArcGISRuntimeEnvironment.createObject("SpatialReference", {wkid:wkid});
-
+            var spatialReference //= ArcGISRuntimeEnvironment.createObject("SpatialReference", {wkid:wkid});
+            if(editsJson[0].geometry)
+            {
+                var spartialJsonForEnvelope = editsJson[0].geometry.spatialReference;
+                var wkid = spartialJsonForEnvelope.wkid;
+                spatialReference = ArcGISRuntimeEnvironment.createObject("SpatialReference", {wkid:wkid});
+            }
+            else
+                spatialReference = ArcGISRuntimeEnvironment.createObject("SpatialReference");
             var xMax = app.savedReportsModel.get(index).xmax;
             var xMin = app.savedReportsModel.get(index).xmin;
             var yMax = app.savedReportsModel.get(index).ymax;

@@ -8,8 +8,11 @@ import ArcGIS.AppFramework 1.0
 import "../controls"
 
 Page {
+    id:reportGalleryPage
     width: parent.width
     height: parent.height
+    objectName: "reportGalleryPage"
+    parentPage:objectName
 
     signal next(string message)
     signal previous(string message)
@@ -41,13 +44,23 @@ Page {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             onClicked: {
-                stackView.pop();
+                // stackView.pop();
+                var stackitem = stackView.get(stackView.depth - 2) // var stackitem = stackView.get(stackView.depth - 2)
+                if (stackitem.objectName === "summaryPage") {
+                    app.populateSummaryObject()
+                    // app.steps--;
+                    previous("")
+
+                }
+                else {
+                    stackView.pop(); //TO-DO
+                }
             }
         }
 
         Text {
             id: title
-            text: qsTr("Report Gallery")
+            text: qsTr("Report Types")
             textFormat: Text.StyledText
             anchors.centerIn: parent
             font.pixelSize: app.titleFontSize
@@ -87,7 +100,7 @@ Page {
                     font.pixelSize: 16 * app.scaleFactor *  fontScale
                     font.family: app.customTitleFont.name
                     color: isDarkMode ? "white" : "#828282"
-                    text: qsTr("Choose a report to get started")
+                    text: qsTr("Choose a report type to continue")
                     horizontalAlignment: Label.AlignHCenter
                     verticalAlignment: Label.AlignVCenter
                     elide: Text.ElideRight
@@ -125,7 +138,7 @@ Page {
 
                         ImageOverlay {
                             anchors.fill: parent
-                            anchors.margins: 4 * scaleFactor
+                            anchors.margins: 8 * scaleFactor
 
                             source: layerTypeIcon
 
@@ -147,7 +160,7 @@ Page {
 
                             Label {
                                 Layout.fillWidth: true
-                                text: layerName
+                                text: reportType
                                 color: isDarkMode ? "white" : "#323232"
                                 font.pixelSize: 20 * scaleFactor  * fontScale
                                 font.family: app.customTextFont.name
@@ -172,9 +185,19 @@ Page {
                     anchors.fill: parent
                     onClicked: {
                         galleryListView.currentIndex = index;
-                        clearData();
-                        app.featureLayerURL = layerURL;
-                        app.init();
+
+                        var reportTypeStrings = ['Damage', 'Request', 'Donation']
+                        app.reportTypeString = reportTypeStrings[index]; // TO-DO
+
+                        var stackitem = stackView.get(stackView.depth - 2) // var stackitem = stackView.get(stackView.depth - 2)
+                        if (stackitem.objectName === "summaryPage") {
+                            app.populateSummaryObject()
+                            // app.steps--;
+                            previous("")
+                        }
+                        else {
+                            stackView.showDamageTypePage();
+                        }
                     }
                 }
             }
@@ -190,34 +213,39 @@ Page {
 
         featureLayerId.sort(function(a, b){return a-b})
 
-        for(var i in app.featureLayerId) {
-            var schemaURL = featureServiceURL + "/" + app.featureLayerId[i];
+        // loop for all report types
+        for (var i in app.reportTypeId) {
+            var schemaURL = featureServiceURL + "/" + app.featureLayerId[0];
             var json = featureServiceManager.getLocalSchema(schemaURL);
+            var name = json.name;
 
-            if(json)
-            {
-                var geometryType = json.geometryType;
-                var icon = ""
-                if(geometryType === "esriGeometryPoint"){
-                    icon = "../images/point.png";
-                } else if(geometryType === "esriGeometryPolyline"){
-                    icon = "../images/line.png";
-                } else if(geometryType === "esriGeometryPolygon"){
-                    icon = "../images/polygon.png";
-                }
+            var geometryType = "esriGeometryPoint";
+            var icon = "../images/point.png";
+            var reportType = "";
+            var description = ""
 
-                var name = json.name;
-                var description = ""
-                if(json.hasOwnProperty("description")) description = json.description;
-
-                reportListModel.append({
-                                           "layerName": name,
-                                           "geometryType": geometryType,
-                                           "layerDescription": description,
-                                           "layerTypeIcon": icon,
-                                           "layerURL": schemaURL
-                                       })
+            if(i === "0"){
+                reportType = "Damage Report";
+                description = "Report the damage you experienced or witnessed.";
+                icon = "../images/damage.png";
+            } else if(i === "1"){
+                reportType = "Request Report";
+                description = "Send us a request for needed resources.";
+                icon = "../images/request.png";
+            } else if(i === "2"){
+                reportType = "Donation Report";
+                description = "Tell us what you want to donate.";
+                icon = "../images/donation.png";
             }
+
+            reportListModel.append({
+                                       "layerName": name,
+                                       "geometryType": geometryType,
+                                       "reportType": reportType,
+                                       "layerDescription": description,
+                                       "layerTypeIcon": icon,
+                                       "layerURL": schemaURL
+                                   })
         }
     }
 

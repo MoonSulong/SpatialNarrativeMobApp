@@ -134,6 +134,24 @@
                     },
                     {
                         "type": "string",
+                        "label": "Disaster type IDs",
+                        "hint": "ID of the disaster type, 0-flood, 1-hurricane, 2-wildfire",
+                        "name": "disasterTypeId"
+                    },
+                    {
+                        "type": "string",
+                        "label": "Report type IDs",
+                        "hint": "ID of the report type, 0-damage, 1-request, 2-donate",
+                        "name": "reportTypeId"
+                    },
+                    {
+                        "type": "string",
+                        "label": "Damage type IDs",
+                        "hint": "ID of the damage type, 0-casualties, 1-road, 2-building, 3-others",
+                        "name": "damageTypeId"
+                    },
+                    {
+                        "type": "string",
                         "label": "Layer IDs of the feature service",
                         "hint": "ID of the feature layer in which to capture the observation record. You can add one or multiple feature layer IDs from the same feature service. For example, 0,1,2",
                         "name": "featureLayerId"
@@ -154,7 +172,7 @@
                     {
                         "type": "string",
                         "label": "Report help link",
-                        "hint": "Help or instructions to help fill out the report. Can be a local html file or a URL.",
+                        "hint": "Help or instructions to help fill out the report. Can be a local HTML file or a URL. For example, assets/help.html or https://www.esri.com/en-us/arcgis/products/arcgis-appstudio/overview ",
                         "name": "reportHelpUrl"
                     },
                     {

@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@ import QtQuick 2.7
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.1
 import ArcGIS.AppFramework 1.0
-import Esri.ArcGISRuntime 100.5
+import Esri.ArcGISRuntime 100.10
+
+import "../controls" as Control
 
 
 import "../images"
@@ -42,9 +44,9 @@ Column {
 
         Text {
             id: aliasText
-            text: fieldAlias + (nullableValue?"":"*")
+            text: fieldAlias + (nullableValue?"":" *")
             verticalAlignment: Text.AlignBottom
-            color: nullableValue? app.textColor:"red"
+            color: app.textColor
             font{
                 pixelSize: app.subtitleFontSize
                 family: app.customTextFont.name
@@ -62,7 +64,7 @@ Column {
             }
         }
 
-        ImageOverlay {
+        Control.ImageOverlay {
             Layout.preferredHeight: parent.height
             Layout.preferredWidth: parent.height
             fillMode: Image.PreserveAspectFit
@@ -147,6 +149,7 @@ Column {
                bottomPadding: 10 * scaleFactor
 
                 height:implicitHeight
+                width: parent.width
 
 
                 font {
@@ -180,7 +183,7 @@ Column {
                 placeholderText: fieldType == Enums.FieldTypeText ? qsTr("Enter some text") : fieldType == Enums.FieldTypeDate ? qsTr("Pick a Date") : qsTr("Enter a number")
                 placeholderTextColor: app.isDarkMode? "white":"gray"
 
-                text:  fieldType == Enums.FieldTypeDate ? attributesArray[fieldName] > "" ? new Date (attributesArray[fieldName]).toLocaleString(Qt.locale(), Qt.DefaultLocaleShortDate) : "" : (attributesArray[fieldName] || "")
+                text:  fieldType == Enums.FieldTypeDate ?(attributesArray[fieldName] > "" ? new Date (attributesArray[fieldName]).toLocaleString(Qt.locale(), Qt.DefaultLocaleShortDate) : "") : (attributesArray[fieldName] || "")
 
                 inputMethodHints: (fieldType == Enums.FieldTypeText || fieldType == Enums.FieldTypeDate) ? Qt.ImhNone : Qt.ImhFormattedNumbersOnly
 
@@ -262,6 +265,94 @@ Column {
 
                 }
             }
+
+         Rectangle{
+
+            visible: fieldType == Enums.FieldTypeDate ? true : false
+            radius: 2*AppFramework.displayScaleFactor
+            width: frame.width
+            height: frame.height
+            clip: true
+            color: Qt.lighter(app.pageBackgroundColor, 1.2)
+            border.width: app.isDarkMode? 0:1
+            border.color: "#888"
+            anchors {
+                right: textFieldContainer.right
+                top: textField.top
+                bottom: textField.bottom
+            }
+
+            Button {
+                anchors.fill:parent
+
+                background: Rectangle{
+                    radius: 2*AppFramework.displayScaleFactor
+                    width: parent.width - 50 * scaleFactor
+                    height: parent.height
+                    clip: true
+                    color: Qt.lighter(app.pageBackgroundColor, 1.2)
+
+                }
+
+                visible: fieldType == Enums.FieldTypeDate ? true : false
+                enabled: visible
+                onClicked: {
+                    app.calendarPicker = app.calendarDialogComponent.createObject(app);
+                    calendarPicker.attributesId = fieldName
+                    calendarPicker.swipeViewIndex = 0;
+                    calendarPicker.selectedDateAndTime = new Date();
+                    calendarPicker.updateDateAndTime();
+                    calendarPicker.visible = true;
+                }
+
+                Control.ImageOverlay {
+                    anchors.fill: parent
+                    anchors.margins: app.scaleFactor
+                    fillMode: Image.PreserveAspectFit
+                    source: "../images/ic_event_black_48dp.png"
+                    opacity: 0.6
+                    showOverlay: app.isDarkMode
+                }
+            }
+        }
+
+         Rectangle{
+            id:frame
+            height: textField.height
+            width: textField.height - 5 * scaleFactor
+            anchors.right: textFieldContainer.right
+            anchors.rightMargin: 1 * scaleFactor
+            anchors.top: textField.top
+
+            radius: width/2
+            color:"transparent"
+            visible: textField.text.length>0 && fieldType != Enums.FieldTypeDate && (textAreaContainer.visible || textField.focus)
+
+            Rectangle{
+                height: parent.height*0.6
+                width: parent.height*0.6
+                anchors.centerIn: parent
+                radius: width/2
+                color: app.isDarkMode? Qt.lighter(app.pageBackgroundColor, 1.2):Qt.darker(app.pageBackgroundColor, 1.2)
+                opacity: 0.8
+
+                Image{
+                    anchors.fill: parent
+                    source:"../images/ic_clear_white_48dp.png"
+                    fillMode: Image.PreserveAspectFit
+                }
+            }
+
+            MouseArea{
+                anchors.fill: parent
+                onClicked: {
+                    if(!textArea.visible)textField.text = ""
+                    else textArea.text=""
+                }
+            }
+        }
+
+
         }
 
 
@@ -352,7 +443,7 @@ Column {
             }
         }
 
-        Rectangle{
+     /*   Rectangle{
             id:frame
             height: textField.height
             width: textField.height - 5 * scaleFactor
@@ -387,8 +478,8 @@ Column {
                 }
             }
         }
-
-        Rectangle{
+*/
+       /* Rectangle{
 
             visible: fieldType == Enums.FieldTypeDate ? true : false
             radius: 2*AppFramework.displayScaleFactor
@@ -427,7 +518,7 @@ Column {
                     calendarPicker.visible = true;
                 }
 
-                ImageOverlay {
+                Control.ImageOverlay {
                     anchors.fill: parent
                     anchors.margins: app.scaleFactor
                     fillMode: Image.PreserveAspectFit
@@ -437,13 +528,14 @@ Column {
                 }
             }
         }
+    */
     }
 
 
     Connections {
         target: calendarPicker
 
-        onAccepted: {
+        function onAccepted() {
             if(calendarPicker.attributesId === fieldName){
                 textField.text = calendarPicker.selectedDateAndTime.toLocaleString(Qt.locale(), Qt.DefaultLocaleShortDate);
                 attributesArray[fieldName] = calendarPicker.dateMilliseconds;

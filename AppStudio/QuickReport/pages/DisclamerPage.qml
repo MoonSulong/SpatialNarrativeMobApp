@@ -25,8 +25,7 @@ import "../controls"
 
 Rectangle {
     id: disclamerPage
-    width: parent.width
-    height: parent.height
+
     color: app.pageBackgroundColor
     property string type: "appview"
 
@@ -147,11 +146,15 @@ Rectangle {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
+                        stackView.showPickTypePage();
+                        // stackView.showDisasterType();
                         if(featureLayerId.length === 1) {
                             app.featureLayerURL = featureServiceURL + "/" + featureLayerId[0];
+                            app.featureLayerBeingEdited = "default"
                             app.init();
                         } else {
-                            stackView.showReportGallery();
+                            // stackView.showDisasterType();
+                            stackView.showPickTypePage();
                         }
                     }
                     onPressedChanged: {

@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import QtMultimedia 5.2
 
 import ArcGIS.AppFramework 1.0
 
-import Esri.ArcGISRuntime 100.2
+import Esri.ArcGISRuntime 100.10
 
 import "../controls"
 
@@ -61,13 +61,17 @@ Item {
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
 
-        model: fieldsMassaged
+        model: fieldsMassaged // TO-DO
+        signal attributesChanged()
+
 
         property bool canSubmit: true
 
-        delegate: Component {Loader {
+        delegate: Component {
+
+            Loader {
                 id: loader
-                property string fieldName :  modelData["name"]
+                property string fieldName :  modelData["name"] // TO-DO === attributesArray[fieldName]
                 property string fieldAlias : modelData["alias"]
                 property bool nullableValue: modelData["nullable"]
                 property var maxlength: modelData["length"]
@@ -75,6 +79,7 @@ Item {
                 property bool hasSubTypeDomain: featureTypes?(featureTypes[pickListIndex].domains[modelData["name"]] ? true : false):false
                 property bool isSubTypeField : modelData["name"] === featureServiceManager.jsonSchema.typeIdField ? true : false
                 property bool hasPrototype: featureTypes?(featureTypes[pickListIndex].templates[0].prototype[modelData["name"]] > "" ? true : false):false
+                // TO-DO
                 property var defaultValue : hasPrototype ? featureTypes[pickListIndex].templates[0].prototype[modelData["name"]] : fieldType == Enums.FieldTypeText ? "" : null
                 //property string defaultDate : hasPrototype && fieldType == Enums.FieldTypeDate ? getDateValue() : ""
                 property string defaultDate : hasPrototype && fieldType == Enums.FieldTypeDate ? defaultValue : ""
@@ -88,6 +93,7 @@ Item {
 
                 width: listView.width
 
+
                 sourceComponent: (function(){
                     if(app.templatesAttributes.hasOwnProperty(fieldName)) {
                         defaultValue = app.templatesAttributes[fieldName];
@@ -95,7 +101,7 @@ Item {
 
                     var temp = (app.isFromSaved || app.attributesArray[fieldName]>"")? app.attributesArray[fieldName]:defaultValue;
 
-                    attributesArray[fieldName] = temp==null? "":temp;
+                    attributesArray[fieldName] = temp === null? "":temp;
                     domainTypeArray = {
                         0: editControl,
                         1: rangeControl,
@@ -146,7 +152,9 @@ Item {
 
                     functionArray[domainTypeIndex]();
                     return domainTypeArray[domainTypeIndex];
-                })()
+                }
+
+                )()
 
                 function getFieldDomainDetails(fieldDomain){
                     domainTypeIndex = getTypeIndex(fieldDomain["type"]);
@@ -230,22 +238,40 @@ Item {
                     }
                 }
             }
+
+
+
         }
 
         function onAttributeUpdate(f_name, f_value, nullableValue){
             for(var i=0; i<theFeatureAttributesModel.count; i++) {
                 var item = theFeatureAttributesModel.get(i);
-                if(item["fieldName"] == f_name) {
+                if(item["fieldName"] === f_name) {
                     item["fieldValue"] = f_value;
-                    if(f_value>""&&f_value!=null&&nullableValue==false){
+                    if(f_value>""&&f_value!==null&&nullableValue===false){
                         requiredAttributes[fieldName] = f_value;
                     } else{
                         delete requiredAttributes[fieldName];
                     }
                     hasAllRequired = numOfRequired==Object.keys(requiredAttributes).length
+                    app.hasAllRequired = hasAllRequired
                 }
             }
         }
+
+        Component.onCompleted: {
+             app.attributesChanged.connect(function(){
+                 for(var k=0;k<listView.children[0].children.length;k++)
+                 {
+                     var child = listView.children[0].children[k]
+                     child.active = false
+                     child.active = true
+                 }
+
+
+             }
+                 )
+         }
     }
 
     Component {

@@ -326,7 +326,7 @@ Item {
 
                 var obj = {
                     "f":"json",
-                    "parameter": "'"+ JSON.stringify(body) + "'"
+                    "parameter": JSON.stringify(body)
                 }
                 console.log("payload:" + JSON.stringify(body))
 

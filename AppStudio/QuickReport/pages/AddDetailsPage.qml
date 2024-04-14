@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,15 @@ import QtGraphicalEffects 1.0
 import ArcGIS.AppFramework 1.0
 import ArcGIS.AppFramework.Networking 1.0
 
-import Esri.ArcGISRuntime 100.2
+import Esri.ArcGISRuntime 100.10
 import QtQuick.Controls.Material 2.1
 
 import "../controls/"
 
+
 Rectangle {
     id: addDetailsPage
+    objectName: "addDetailsPage"
     width: parent ? parent.width :0
     height: parent ?parent.height:0
     color: app.pageBackgroundColor
@@ -47,6 +49,7 @@ Rectangle {
     property bool backToPreviousPage: true
     property string type: "appview"
     property var webPage
+    property var myFavoriteEntries:({})
     Material.accent:Material.Grey
 
     ColumnLayout {
@@ -80,18 +83,218 @@ Rectangle {
                 anchors.leftMargin: 10
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
+
                 onClicked: {
-                    app.steps--;
-                    previous("")
+                    var stackitem = stackView.get(stackView.depth - 2) //var stackitem = stackView.get(stackView.depth - 2)
+                    if(stackitem.objectName === "summaryPage")
+                    {
+                        if(attributesPage.isRangeValidated)
+                        {
+                            app.hasAllRequired = attributesPage.hasAllRequired && attributesPage.isRangeValidated
+                            app.populateSummaryObject()
+                            // app.steps--;
+                            previous("")
+                        }
+                        else
+                        {
+                            alertBox.text = qsTr("Error");
+                            alertBox.informativeText = qsTr("Range not validated.")+"\n";
+                            alertBox.visible = true;
+                        }
+
+                    }
+                    else
+                    {
+                        app.steps--;
+                        if(stackitem.initModel)
+                        stackitem.initModel()
+                        previous("")
+                    }
+
+
                 }
             }
 
             CarouselSteps{
+                id:carousal
                 height: parent.height
                 anchors.centerIn: parent
                 items: app.numOfSteps
                 currentIndex: app.steps
             }
+
+            ImageButton {
+                source: "../images/more.png"
+                height: 30 * app.scaleFactor
+                width: 30 * app.scaleFactor
+                checkedColor : "transparent"
+                pressedColor : "transparent"
+                hoverColor : "transparent"
+                glowColor : "transparent"
+                anchors.rightMargin: 10
+                anchors.leftMargin: 10
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                onClicked: {
+                    console.log("more onClicked event start")
+                    more.updateMenuItemsContent ()
+                    more.open()
+
+                }
+            }
+
+            PopupMenu{
+                id:more
+                defaultMargin: app.defaultMargin
+                backgroundColor: Qt.lighter(blk_000)//"#FFFFFF"
+                highlightColor: Qt.darker(backgroundColor, 1.1)
+                textColor: app.textColor
+                primaryColor: app.primaryColor
+                menuItems: [
+
+
+                ]
+                Material.primary: app.primaryColor
+                Material.background: backgroundColor
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+                width:defaultContentWidth
+
+                x: parent.width - width - app.baseUnit
+                y: 0 + app.baseUnit
+
+                // TO-DO
+                onMenuItemSelected: {
+                    switch (itemLabel) {
+                    case app.clear_entries:
+                        clearFavoritesDialog.visible = true
+
+                        break;
+                    case app.save_entries:
+                        var favoriteObject = {}
+                        var categoryObj = {}
+                        var editObject = {}
+                        for(var i=0; i<theFeatureAttributesModel.count; i++) {
+                            var item = theFeatureAttributesModel.get(i);
+                            var fieldName = item["fieldName"]
+                            var fieldVal = attributesArray[fieldName]
+                            //check if empty
+                            if(fieldVal !== null && fieldVal !== undefined)
+                            {
+                                var  modfieldVal = fieldVal.toString().trim()
+
+                                if(modfieldVal > "")
+                                    editObject[fieldName] = fieldVal
+                            }
+
+                        }
+
+
+                        favoriteObject.layerName = app.featureLayerBeingEdited
+                        favoriteObject.category = "default"
+                        if(Object.keys(editObject).length > 0)
+                        {
+
+                            favoriteObject.editsJson = JSON.stringify(editObject)
+                            app.saveFavorites(favoriteObject)
+
+                            toastMessage.show(app.entries_saved)
+
+                            updateMenuItemsContent()
+                            app.loadFavorites()
+                        }
+
+                        break;
+                    case app.paste_entries:
+                        var favoriteObj = favoriteEntries[app.featureLayerBeingEdited]
+                        for(var k=0; k<theFeatureAttributesModel.count; k++) {
+                            var obj = theFeatureAttributesModel.get(k);
+                            var fldName = obj["fieldName"]
+                            var entries = favoriteObj["default"]
+                            var jsonObj = JSON.parse(entries)
+                            var newVal = jsonObj[fldName]
+
+
+                            if(newVal !== undefined && newVal !== null)
+                            {
+                                attributesArray[fldName] = newVal
+                            }
+                        }
+                        app.attributesChanged()
+
+                        break;
+
+                    }
+
+                }
+
+                function clearFavoriteEntries()
+                {
+
+                }
+
+                function updateMenuItemsContent () {
+                    var schemaURL = featureServiceURL + "/" + app.featureLayerId[0];
+                    var json = featureServiceManager.getLocalSchema(schemaURL);
+                    app.featureLayerBeingEdited = json.name;
+                    var layername = app.featureLayerBeingEdited;
+
+                    // layername = ""
+                    if(layername > "")
+                    {
+                        console.log("layername: " + layername)
+
+                        var favorites = null
+                        var favoriteCategories = app.favoriteEntries[layername]
+                        if(favoriteCategories && favoriteCategories["default"])
+                        {
+                            var  favorite_cat = JSON.parse(favoriteCategories["default"])
+                            if(favorite_cat)
+                                favorites = favorite_cat
+                        }
+                        if(favorites)
+                        {
+                            console.log("favorites: " + favorites)
+
+                            if(Object.keys(favorites).length > 0)
+                            {
+                                myFavoriteEntries = favorites
+                                more.removeItemFromMenuList({"itemLabel": app.save_entries})
+                                more.appendUniqueItemToMenuList({"itemLabel": app.paste_entries})
+                                more.appendUniqueItemToMenuList({"itemLabel": app.clear_entries})
+                                more.height= app.units(16)  * 4 * scaleFactor + app.units(32) * scaleFactor
+
+
+                            }
+                            else
+                            {
+                                more.removeItemFromMenuList({"itemLabel": app.paste_entries})
+                                more.removeItemFromMenuList({"itemLabel": app.clear_entries})
+                                more.appendUniqueItemToMenuList({"itemLabel": app.save_entries})
+                                more.height= app.units(16)  * 2 * scaleFactor + app.units(32) * scaleFactor
+
+                            }
+                        }
+                        else
+                        {
+                            more.removeItemFromMenuList({"itemLabel": app.paste_entries})
+                            more.removeItemFromMenuList({"itemLabel": app.clear_entries})
+                            more.appendUniqueItemToMenuList({"itemLabel": app.save_entries})
+                            more.height= app.units(16) * 2 * scaleFactor + app.units(32) * scaleFactor
+                            console.log("removeItem?")
+                        }
+
+                    }
+
+                    console.log("method : more.updateMenu() starts")
+                    more.updateMenu()
+                }
+
+
+
+
+
+            }
+
         }
 
         RowLayout{
@@ -126,7 +329,15 @@ Rectangle {
                 MouseArea{
                     anchors.fill: parent
                     onClicked: {
-                        app.openWebView(1, { pageId: addDetailsPage, url: "" + 4 });
+                        if(app.helpPageUrl && validURL(app.helpPageUrl))
+                            app.openWebView(0, {  url: app.helpPageUrl });
+                        else
+                        {
+                            var component = webPageComponent;
+                            webPage = component.createObject(addDetailsPage);
+                            webPage.openSectionID(""+4)
+                        }
+                        //app.openWebView(1, { pageId: addDetailsPage, url: "" + 4 });
                     }
                 }
             }
@@ -157,12 +368,45 @@ Rectangle {
                 spacing: 8 * app.scaleFactor
 
                 CustomButton {
+
+                    id: nextButton
+                    buttonText: qsTr("Summary")
+                    buttonColor: attributesPage.isRangeValidated? app.buttonColor:"red"//(attributesPage.hasAllRequired && attributesPage.isRangeValidated)? app.buttonColor:"red"
+                    buttonFill:attributesPage.isRangeValidated // attributesPage.hasAllRequired && attributesPage.isRangeValidated
+                    Layout.fillWidth: true
+                    buttonWidth: Math.min(parent.width, 600 * scaleFactor)
+                    buttonHeight: 50 * app.scaleFactor
+                    visible: app.showSummary
+
+
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: true
+                        onClicked: {
+                            var isValidGeo = checkGeometry()
+                            app.isReadyForSubmit = attributesPage.hasAllRequired && isValidGeo && attributesPage.isRangeValidated;
+                            if(attributesPage.isRangeValidated)
+                                next("showSummary")
+                            else
+                            {
+                                alertBox.text = qsTr("Error");
+                                alertBox.informativeText = qsTr("Range not validated.")+"\n";
+                                alertBox.visible = true;
+                            }
+                        }
+
+                    }
+                }
+
+                CustomButton {
                     buttonText: qsTr("Save")
                     buttonColor: app.buttonColor
                     buttonFill: false
                     buttonWidth: submitBtn.visible ? ((parent.width-parent.spacing)/2) : parent.width
                     buttonHeight: 50*app.scaleFactor
                     Layout.fillWidth: true
+                    visible:!app.showSummary
+
 
                     MouseArea {
                         anchors.fill: parent
@@ -191,17 +435,17 @@ Rectangle {
                     buttonWidth: (parent.width-parent.spacing)/2
                     buttonHeight: 50 * app.scaleFactor
                     Layout.fillWidth: true
-                    visible: AppFramework.network.isOnline
+                    visible: Networking.isOnline && !app.showSummary
                     MouseArea {
                         anchors.fill: parent
                         enabled: attributesPage.hasAllRequired && attributesPage.isRangeValidated
                         onClicked: {
                             if(captureType === "line" && !(polylineObj.parts.part(0) && polylineObj.parts.part(0).pointCount>=2)){
-                                alertBox.text = qsTr("Unable to submit.");
+                                alertBox.text = qsTr("Unable to submit");
                                 alertBox.informativeText = qsTr("Add a valid map path.")+"\n";
                                 alertBox.visible = true;
                             }else if(captureType === "area" && !(polygonObj.parts.part(0) && polygonObj.parts.part(0).pointCount>=3)){
-                                alertBox.text = qsTr("Unable to submit.");
+                                alertBox.text = qsTr("Unable to submit");
                                 alertBox.informativeText = qsTr("Add a valid map area.")+"\n";
                                 alertBox.visible = true;
                             }else{
@@ -228,8 +472,10 @@ Rectangle {
                         }
                     }
                 }
+
             }
         }
+
     }
 
 
@@ -245,6 +491,19 @@ Rectangle {
         visible: source.visible
     }
 
+
+    ConfirmBox{
+        id: clearFavoritesDialog
+        anchors.fill: parent
+        text:app.clear_toast
+        onAccepted: {
+            app.clearFavorites()
+            favoriteEntries[app.featureLayerBeingEdited] = {}
+            app.loadFavorites()
+            more.updateMenuItemsContent()
+
+        }
+    }
     ConfirmBox{
         id: attachmentSizeDialog
         anchors.fill: parent
@@ -256,6 +515,24 @@ Rectangle {
 
     FileInfo{
         id: fileInfo
+    }
+
+    Component.onCompleted: {
+        var stackitem = stackView.get(stackView.depth - 2)
+        if(stackitem.objectName === "summaryPage")
+        {
+            nextButton.visible = false
+            carousal.visible = false
+
+        }
+
+    }
+
+    Keys.onReleased: {
+        if (event.key === Qt.Key_Back) {
+            back()
+            event.accepted = true;
+        }
     }
 
     function checkAttachmentSize(){
@@ -273,19 +550,52 @@ Rectangle {
 
 
     //================================================================================
-
+    function checkGeometry()
+    {
+        var isValidGeo = false;
+        if(captureType === "line" && polylineObj && polylineObj.parts.part(0) && polylineObj.parts.part(0).pointCount>=2){
+            isValidGeo = true;
+        }else if(captureType === "area" && polygonObj && polygonObj.parts.part(0) && polygonObj.parts.part(0).pointCount>=3){
+            isValidGeo = true;
+        }else if(captureType === "point") {
+            isValidGeo = true;
+        }
+        return isValidGeo
+    }
 
     function back(){
-        if(webPage != null && webPage.visible === true){
+        if(webPage !== null && webPage!== undefined && webPage.visible === true){
             webPage.close();
             app.focus = true;
         } else if(Qt.inputMethod.visible === true){
             Qt.inputMethod.hide();
             app.focus = true;
         } else if(app.draftSaveDialog == null || app.draftSaveDialog.visible === false){
-            app.steps--;
-            previous("")
+            var stackitem = stackView.get(stackView.depth - 2)
+            if(stackitem.objectName === "summaryPage")
+            {
+                if(attributesPage.isRangeValidated)
+                {
+                    app.hasAllRequired = attributesPage.hasAllRequired && attributesPage.isRangeValidated
+                    app.populateSummaryObject()
+                    // app.steps--;
+                    previous("")
+                }
+                else
+                {
+                    alertBox.text = qsTr("Error");
+                    alertBox.informativeText = qsTr("Range not validated.")+"\n";
+                    alertBox.visible = true;
+                }
+
+            }
+            else
+            {
+                app.steps--;
+                previous("")
+            }
         }
     }
 }
+
 

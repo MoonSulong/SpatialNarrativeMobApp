@@ -1,4 +1,4 @@
-/* Copyright 2019 Esri
+/* Copyright 2021 Esri
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,12 +26,15 @@ Label {
     property string titleFontFamily: root.getAppProperty (app.titleFontFamily, "")
     property string accentColor: root.getAppProperty(app.accentColor)
 
-    color: root.getAppProperty (app.baseTextColor, Qt.darker("#F7F8F8"))
+    color:root.getAppProperty (app.baseTextColor, Qt.darker("#F7F8F8"))
     font {
-        pointSize: root.getAppProperty (app.baseFontSize, 14)
-        family: "%1,%2".arg(baseFontFamily).arg(fontNameFallbacks)
+        bold: false
+        pixelSize: app.subtitleFontSize
+        family: app.customTextFont.name
+
     }
-    Material.accent: accentColor
+
+    //Material.accent: accentColor
     wrapMode: Text.WordWrap
 
     function getAppProperty (appProperty, fallback) {
