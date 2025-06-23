@@ -33,8 +33,8 @@ Cusomize ArcGIS QuickReport template in AppStudio
 ## 3. Application Deployment
 Atlantic hurricane season, which was the most active and the seventh costliest Atlantic hurricane
 season on record. The observations were collected in the Courtland town on Virginia
-on September 20, 2020, and in the Elkin town across the Yadkin River on North Carolina on Oc-
-tober 29, 2020. The photos depicts the flooding, road closure and emerged facilities with precise
+on September 20, 2020, and in the Elkin town across the Yadkin River on North Carolina on October 29, 2020. 
+The photos depicts the flooding, road closure and emerged facilities with precise
 real time and geo-tagged location and attached short descriptions
 ![local environment](https://raw.githubusercontent.com/MoonSulong/SpatialNarrativeMobApp/master/observations.png)
 
