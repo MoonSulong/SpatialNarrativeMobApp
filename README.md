@@ -1,7 +1,6 @@
 # SpatialNarrativeMobApp
 - A Geo-spatial narrative mobile app to collect citizen science data
-![local environment](https://raw.githubusercontent.com/MoonSulong/SpatialNarrativeMobApp/master/v2.png)
-![local environment](https://raw.githubusercontent.com/MoonSulong/SpatialNarrativeMobApp/master/v3.png)
+![local environment](https://raw.githubusercontent.com/MoonSulong/SpatialNarrativeMobApp/master/flow.png)
 
 
 ## Authors
