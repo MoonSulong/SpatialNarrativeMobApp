@@ -26,7 +26,8 @@ Cusomize ArcGIS QuickReport template in AppStudio
 	* Search educational Video in YouTube
 
 - Backend: `ArcGIS`
-	* Utilize map layer in ArcGIS online to manage data 
+	* Utilize map layer in ArcGIS online to manage data
+![local environment](https://raw.githubusercontent.com/MoonSulong/SpatialNarrativeMobApp/master/framework.png) 
 
 
 ## 3. Application Deployment
